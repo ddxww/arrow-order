@@ -12,6 +12,7 @@ from pathlib import Path
 def main():
     parser = argparse.ArgumentParser(description="箭序 · 第一阶段界面预览")
     parser.add_argument("--export", action="store_true", help="Export PNGs without a visible window")
+    parser.add_argument("--output", type=Path, help="Directory for exported PNGs (use with --export)")
     parser.add_argument("--scene", default="home", choices=("home", "levels", "game", "hint", "collision", "win", "fail", "complete"))
     args = parser.parse_args()
     if args.export:
@@ -26,7 +27,7 @@ def main():
     painter = Painter()
     if args.export:
         pygame.display.set_mode((1, 1))
-        output = Path(__file__).resolve().parent / "docs" / "previews"
+        output = args.output or Path(__file__).resolve().parent / "docs" / "previews"
         output.mkdir(parents=True, exist_ok=True)
         report = {}
         for scene in SCENES:

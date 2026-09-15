@@ -31,3 +31,7 @@ PNG已检查默认960×800画面。Pygame预览提供等比缩放与坐标映射
 ## 审阅入口
 
 打开 `previews/index.html`，左侧可切换8个画面。用户需确认配色、布局、箭头大小、文字清晰度；目前节点1尚未获用户确认。
+
+## Windows 预览包验证（用户追加要求后）
+
+使用 PyInstaller 6.22.3 构建 `dist/ArrowOrder-Preview.exe`。对该EXE执行 `--export --output build/exe-smoke`，在正常Windows环境无窗口导出8张图片并以0退出；8张图的SHA-256与源码生成结果全部相同。验证覆盖EXE启动、运行库、字体及所有预览画面，不代表真实消除玩法或本人试玩。
