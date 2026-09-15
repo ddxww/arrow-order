@@ -64,6 +64,12 @@ python -m unittest tests.test_endless tests.test_game tests.test_scoring
 
 ![失败与残血提示](docs/previews/fail.png)
 
+![关卡选择](docs/previews/levels.png)
+
+![提示状态](docs/previews/hint.png)
+
+![箭头碰撞](docs/previews/collision.png)
+
 ## 项目目录
 
 - `game.py`：完整游戏入口。
