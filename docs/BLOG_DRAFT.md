@@ -5,7 +5,7 @@
 | 这个作业属于哪个课程 | [H202601 软件工程与软件工程实践](https://edu.cnblogs.com/campus/fzu/2026-01SoftwareEngineeringandSoftwareEngineeringPractice/) |
 | 这个作业要求在哪里 | [2026 秋软件工程个人作业（第二次）](https://edu.cnblogs.com/campus/fzu/2026-01SoftwareEngineeringandSoftwareEngineeringPractice/homework/16718) |
 | 这个作业的目标 | 使用 Python 和 AIGC 完成“一箭又一箭”小游戏 |
-| 学号 | `请在发布前填写本人学号` |
+| 学号 | 102401533 |
 | GitHub 仓库 | [ddxww/arrow-order](https://github.com/ddxww/arrow-order) |
 
 ## 一、项目展示
@@ -18,7 +18,7 @@
 
 开始页提供“开始游戏”“关卡选择”和“无尽模式”入口，右上角可以分别开关音乐和音效。
 
-![开始界面](https://raw.githubusercontent.com/ddxww/arrow-order/master/docs/previews/home.png)
+![最新版本开始界面](https://raw.githubusercontent.com/ddxww/arrow-order/master/docs/previews/latest-home.png)
 
 ### 2. 关卡选择
 
@@ -30,11 +30,15 @@
 
 游戏页上方显示当前关卡、剩余箭头和剩余失误次数，中间是棋盘，下方有提示、重新开始和返回按钮。鼠标移到箭头上时，所在格会高亮。
 
-![游戏界面](https://raw.githubusercontent.com/ddxww/arrow-order/master/docs/previews/game.png)
+![最新版本游戏界面](https://raw.githubusercontent.com/ddxww/arrow-order/master/docs/previews/latest-playing.png)
 
 路径畅通时，箭头会沿自身方向飞出棋盘，动画结束后再从数据中删除。若路径上有其他箭头，当前箭头会前冲、回弹并变红，同时标出最近的阻挡者。
 
 ![碰撞反馈](https://raw.githubusercontent.com/ddxww/arrow-order/master/docs/previews/collision.png)
+
+使用提示后，程序只高亮一个当前可以消除的箭头，不会自动替玩家完成操作。
+
+![提示状态](https://raw.githubusercontent.com/ddxww/arrow-order/master/docs/previews/hint.png)
 
 每关有 3 次失误机会。机会只剩 1 次时，游戏会出现红色视野边缘和双拍心跳提示；机会耗尽后进入失败页面。清空棋盘则显示本关用时、剩余机会、提示使用次数和星级。
 
@@ -44,7 +48,11 @@
 
 ![全部通关](https://raw.githubusercontent.com/ddxww/arrow-order/master/docs/previews/complete.png)
 
-演示视频将在本人完成上机试玩和录屏后补充。上面的图片均由项目程序实际渲染，不是设计稿。
+无尽模式累计通关 3 次后，会解锁一次特殊 CG。这个奖励不会改变普通关卡的解锁进度和最好成绩。
+
+![无尽模式特殊 CG](https://raw.githubusercontent.com/ddxww/arrow-order/master/docs/previews/latest-special-cg.png)
+
+完整玩法演示：[哔哩哔哩视频](https://www.bilibili.com/video/BV1mGep6AE5i/)。上面的图片均来自我的 [GitHub 项目展示区](https://github.com/ddxww/arrow-order#%E6%BC%94%E7%A4%BA%E8%A7%86%E9%A2%91%E4%B8%8E%E7%95%8C%E9%9D%A2%E5%9B%BE%E7%89%87)，由项目程序实际渲染，不是设计稿。
 
 ## 二、项目介绍
 
@@ -190,6 +198,8 @@ def solve_order(board):
 
 本项目主要使用 Codex 协助需求分析、编码、测试、打包和文档整理。下面的记录来自实际开发会话，没有把项目完成后的总结倒写成虚构过程。
 
+本节的 3 次代表性过程和对应截图另整理在 [AIGC 使用过程记录](AIGC_PROCESS.md)，包括星级与胜利反馈、无尽模式与特殊 CG、最后一次机会的心跳和红色边缘效果。
+
 | 次数 | 子任务 | 我提出的要求 | AI 完成的内容 | 实际效果 | 我的判断或修改 |
 |---|---|---|---|---|---|
 | 1 | 需求分析 | 阅读课程作业和参考博客，先复述要求，再给出完整方案，每个阶段留确认节点 | 整理了规则、界面、六关、测试、打包和博客材料的计划，并建立 PRD | 方案覆盖了作业的基础要求，也列出了提示、存档等扩展 | 我确认采用 Python + Pygame、6 个固定关卡、每关 3 次机会和 3 次提示 |
@@ -212,6 +222,10 @@ def solve_order(board):
 | T04 | 消除本关全部箭头 | 显示通关并进入下一关 | 前五关进入单关结算，第六关进入全部完成页 | 通过 |
 | T05 | 失误次数耗尽 | 显示失败并允许重新开始 | 第三次碰撞反馈结束后进入失败页，重开恢复本关 | 通过 |
 | T06 | 游戏进行中重新开始 | 箭头布局和失误次数恢复 | 布局、3 次机会、3 次提示和动画均恢复 | 通过 |
+| T07 | 检查四个方向的相邻及远距离阻挡 | 路径上的任意箭头都会阻挡，身后及其他行列不影响判断 | 四个方向均找到最近阻挡者，隔着空格也没有漏判或误判 | 通过 |
+| T08 | 点击空格、棋盘外或在动画期间重复点击 | 无效输入不扣次数，动画期间只执行第一次有效操作 | 棋盘和机会保持正确，没有重复删除或连续扣次 | 通过 |
+| T09 | 使用提示、通关解锁并重新读取存档 | 提示只扣一次，下一关解锁，最好成绩和声音设置能够恢复 | 提示高亮可消除箭头；重新创建游戏对象后进度和设置读取正确 | 通过 |
+| T10 | 连续生成并求解无尽模式棋盘 | 棋盘含四种方向、数量符合难度范围，而且始终存在完整解序 | 随机关卡与保底布局均通过可解性检查，失败重试不改变原棋盘 | 通过 |
 
 除作业指定的 T01 至 T06 外，我还检查了这些情况：
 
