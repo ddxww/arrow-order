@@ -35,7 +35,10 @@ def progress_path() -> Path:
 class SoundKit:
     def __init__(self):
         self.enabled = True
+        self.music_enabled = True
         self.sounds = {}
+        self.music = None
+        self.music_channel = None
         try:
             pygame.mixer.init(frequency=22050, size=-16, channels=1, buffer=256)
             for name, freq, duration in (("click", 540, .06), ("fly", 760, .13), ("hit", 170, .12), ("win", 880, .22)):
@@ -45,8 +48,43 @@ class SoundKit:
                     envelope = min(1, i / 300, (total - i) / 1000)
                     samples.append(int(11000 * envelope * math.sin(2 * math.pi * freq * i / 22050)))
                 self.sounds[name] = pygame.mixer.Sound(buffer=samples.tobytes())
+            self.music = self._make_music()
         except pygame.error:
             self.enabled = False
+            self.music_enabled = False
+
+    @staticmethod
+    def _make_music():
+        """Build an original, gently looping background track in memory."""
+        sample_rate, bpm, bars = 22050, 92, 8
+        beat = 60 / bpm
+        total = int(sample_rate * beat * 4 * bars)
+        mix = [0.0] * total
+        chords = ((261.63, 329.63, 392.00), (220.00, 261.63, 329.63),
+                  (174.61, 220.00, 261.63), (196.00, 246.94, 293.66))
+        melody = (659.25, 0, 523.25, 587.33, 659.25, 0, 783.99, 659.25,
+                  523.25, 0, 440.00, 523.25, 587.33, 0, 523.25, 392.00)
+
+        def add_note(frequency, start, duration, volume, fade=.12):
+            first = int(start * sample_rate)
+            count = min(int(duration * sample_rate), total - first)
+            edge = max(1, int(fade * sample_rate))
+            for i in range(count):
+                envelope = min(1.0, i / edge, (count - i) / edge)
+                mix[first + i] += volume * envelope * math.sin(2 * math.pi * frequency * i / sample_rate)
+
+        for bar in range(bars):
+            start = bar * 4 * beat
+            for frequency in chords[bar % len(chords)]:
+                add_note(frequency / 2, start, 4 * beat, .105, .35)
+            add_note(chords[bar % len(chords)][0], start, 4 * beat, .035, .4)
+        for step in range(bars * 2):
+            frequency = melody[step % len(melody)]
+            if frequency:
+                add_note(frequency, step * 2 * beat, 1.55 * beat, .075, .08)
+
+        samples = array.array("h", (int(max(-1, min(1, value)) * 32767) for value in mix))
+        return pygame.mixer.Sound(buffer=samples.tobytes())
 
     def play(self, name):
         if self.enabled and name in self.sounds:
@@ -54,6 +92,17 @@ class SoundKit:
 
     def toggle(self):
         self.enabled = not self.enabled
+
+    def start_music(self):
+        if self.music_enabled and self.music and (not self.music_channel or not self.music_channel.get_busy()):
+            self.music_channel = self.music.play(loops=-1, fade_ms=700)
+
+    def toggle_music(self):
+        self.music_enabled = not self.music_enabled
+        if self.music_enabled:
+            self.start_music()
+        elif self.music_channel:
+            self.music_channel.fadeout(350)
 
 
 class Game:
@@ -80,6 +129,7 @@ class Game:
         self.progress_file = Path(data_dir) / "progress.json" if data_dir is not None else progress_path()
         self.storage_message = ""
         self.load_progress()
+        self.sound.start_music()
 
     def load_progress(self):
         try:
@@ -88,6 +138,7 @@ class Game:
             raw_best = data.get("best", {})
             self.best = {str(k): v for k, v in raw_best.items() if str(k).isdigit() and 0 <= int(k) < len(LEVELS) and isinstance(v, dict) and type(v.get("mistakes")) is int and 0 <= v["mistakes"] <= 2 and type(v.get("hints")) is int and 0 <= v["hints"] <= 3} if isinstance(raw_best, dict) else {}
             self.sound.enabled = bool(data.get("sound", True))
+            self.sound.music_enabled = bool(data.get("music", True)) and self.sound.music is not None
         except FileNotFoundError:
             self.unlocked, self.best = 1, {}
         except (OSError, ValueError, TypeError, AttributeError):
@@ -98,7 +149,7 @@ class Game:
         try:
             self.progress_file.parent.mkdir(parents=True, exist_ok=True)
             temporary = self.progress_file.with_suffix(".tmp")
-            temporary.write_text(json.dumps({"unlocked": self.unlocked, "best": self.best, "sound": self.sound.enabled}, ensure_ascii=False, indent=2), encoding="utf-8")
+            temporary.write_text(json.dumps({"unlocked": self.unlocked, "best": self.best, "sound": self.sound.enabled, "music": self.sound.music_enabled}, ensure_ascii=False, indent=2), encoding="utf-8")
             temporary.replace(self.progress_file)
         except OSError:
             self.storage_message = "进度暂未保存，本次游戏仍可继续。"
@@ -134,6 +185,8 @@ class Game:
     def draw_header_footer(self):
         self.painter.header()
         self.painter.footer()
+        self.painter.box((731, 27, 89, 36), BG, 12)
+        self.button("音乐 开" if self.sound.music_enabled else "音乐 关", (731, 27, 89, 36), "music")
         self.painter.box((831, 27, 89, 36), BG, 12)
         self.button("音效 开" if self.sound.enabled else "音效 关", (831, 27, 89, 36), "sound")
 
@@ -303,6 +356,7 @@ class Game:
     def action(self, action):
         self.sound.play("click")
         if action == "sound": self.sound.toggle(); self.save_progress()
+        elif action == "music": self.sound.toggle_music(); self.save_progress()
         elif action == "start": self.reset_level(next((i for i in range(len(LEVELS)) if str(i) not in self.best), 0))
         elif action == "levels": self.scene, self.animation = "levels", None
         elif action == "home": self.scene, self.animation = "home", None
