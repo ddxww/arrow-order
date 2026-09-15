@@ -56,9 +56,11 @@ python -m unittest tests.test_endless tests.test_game tests.test_scoring
 
 下面是游戏的主要界面截图：
 
-![首页](docs/previews/home.png)
+![最新版本首页](docs/previews/latest-home.png)
 
-![游戏界面](docs/previews/game.png)
+![最新版本游戏界面](docs/previews/latest-playing.png)
+
+![最新版本特殊 CG](docs/previews/latest-special-cg.png)
 
 ![通关结算](docs/previews/win.png)
 
