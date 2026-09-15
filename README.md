@@ -50,6 +50,20 @@ python -m venv .venv
 python -m unittest tests.test_endless tests.test_game tests.test_scoring
 ```
 
+## 演示视频与界面图片
+
+完整玩法演示：[哔哩哔哩视频](https://www.bilibili.com/video/BV1mGep6AE5i/)。
+
+下面是游戏的主要界面截图：
+
+![首页](docs/previews/home.png)
+
+![游戏界面](docs/previews/game.png)
+
+![通关结算](docs/previews/win.png)
+
+![失败与残血提示](docs/previews/fail.png)
+
 ## 项目目录
 
 - `game.py`：完整游戏入口。
