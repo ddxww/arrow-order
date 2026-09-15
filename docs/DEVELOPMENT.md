@@ -107,3 +107,10 @@
 - 游戏启动检查已通过；自动驱动六关按保存解序清空，并验证三次阻挡后失败。该自动检查不替代用户本人试玩。
 - 用户追加要求先领取程序后，已构建 `dist/ArrowOrder.exe`；完整程序不需要 Python，使用 APPDATA 保存进度。预览 EXE 仍为 `ArrowOrder-Preview.exe`。
 - 下一步是用户本人实际试玩六关，记录难度与反馈，再完成最终测试报告、博客草稿和 GitHub 推送。
+
+## 10. GitHub 上传补记
+
+- 用户在电脑断电恢复后要求继续执行，并明确追加“把代码上传至 GitHub”。
+- 2026-09-15 使用已登录的 `ddxww` 账号创建公开仓库：<https://github.com/ddxww/arrow-order>。
+- 已推送三笔有意义的提交：界面预览、Windows 预览打包、六关完整玩法。通过 GitHub API 核验仓库公开、默认分支为 `master`，远程提交信息与本地一致。
+- `dist/` 因包含本地构建产物而被 `.gitignore` 排除；源码、资源、文档、测试和打包脚本均已上传。EXE 可从本地 `dist/ArrowOrder-Windows.zip` 领取，后续如需要可作为 GitHub Release 附件发布。
