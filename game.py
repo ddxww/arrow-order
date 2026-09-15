@@ -19,7 +19,7 @@ import pygame
 
 from arrowgame.levels import LEVELS
 from arrowgame.effects import DangerVignette, HEARTBEAT_PERIOD, HEARTBEAT_PULSES
-from arrowgame.preview_ui import Painter, BG, INK, MUTED, ACCENT, PALE, LINE, WHITE, ORANGE, RED
+from arrowgame.preview_ui import Painter, BG, INK, MUTED, ACCENT, PALE, LINE, WHITE, ORANGE, RED, DIRECTION_COLORS
 from arrowgame.rules import can_exit, first_blocker
 from arrowgame.scoring import LevelTimer, award_stars, better_record, clean_record, format_time
 from arrowgame.endless import generate_level
@@ -418,7 +418,8 @@ class Game:
         if self.animation and self.animation["kind"] == "fly":
             rows[self.animation["row"]][self.animation["col"]] = "."
         p.board(x, y, cell, rows=rows, highlight=None)
-        for position, color in ((highlight, ORANGE if self.hint_active else ACCENT),):
+        highlight_color = ORANGE if self.hint_active else DIRECTION_COLORS.get(self.board[highlight[0]][highlight[1]], ACCENT) if highlight else ACCENT
+        for position, color in ((highlight, highlight_color),):
             if position and self.board[position[0]][position[1]] != "." and not self.animation:
                 r, c = position
                 p.box((x+c*cell+4, y+r*cell+4, cell-8, cell-8), "#FAEEDD" if self.hint_active else "#E5DFF4", 12, color, 2)
@@ -441,7 +442,7 @@ class Game:
             distance = {"U":(a["row"]+1)*cell+32,"D":(len(rows)-a["row"])*cell+32,"L":(a["col"]+1)*cell+32,"R":(len(rows)-a["col"])*cell+32}[a["direction"]]
             cx = x + a["col"] * cell + cell / 2 + dc * progress * distance
             cy = y + a["row"] * cell + cell / 2 + dr * progress * distance
-            p.arrow((cx, cy), a["direction"], cell * .39, ACCENT, 4)
+            p.arrow((cx, cy), a["direction"], cell * .39, DIRECTION_COLORS.get(a["direction"], ACCENT), 4)
         p.text(self.feedback, 480, 658, 14, self.feedback_color, center=True)
         self.button(f"提示  {self.hints} / 3", (264, 693, 146, 38), "hint", enabled=self.hints > 0 and self.animation is None and not self.hint_active)
         self.button("重新开始", (421, 693, 146, 38), "restart")

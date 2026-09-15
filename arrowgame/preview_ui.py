@@ -21,6 +21,8 @@ LINE = "#E0DCEC"
 WHITE = "#FFFDFC"
 ORANGE = "#B67A39"
 RED = "#B95770"
+# Direction colors: left red, down yellow, right blue, and up green.
+DIRECTION_COLORS = {"L": "#D94B5B", "D": "#E0A62B", "R": "#3F78C5", "U": "#4AA36B"}
 DEMO_BOARD = (".U.RD", "U.L.D", ".RD.L", "D.U.L", "L.R.R")
 
 
@@ -88,7 +90,9 @@ class Painter:
         self.canvas.blit(glyph, (px, round(y * 2)))
         self.text_bounds.append((str(value), pygame.Rect(px // 2, int(y), math.ceil(glyph.get_width() / 2), math.ceil(glyph.get_height() / 2))))
 
-    def arrow(self, center, direction="R", size=24, color=ACCENT, width=4):
+    def arrow(self, center, direction="R", size=24, color=None, width=4):
+        if color is None:
+            color = DIRECTION_COLORS[direction]
         dr, dc = {"U": (-1, 0), "D": (1, 0), "L": (0, -1), "R": (0, 1)}[direction]
         x, y = center
         length = size / 2
@@ -145,7 +149,7 @@ class Painter:
                 if selected or is_blocker:
                     self.box((tx + 4, ty + 4, cell - 8, cell - 8), fill, 12, RED if collision else ORANGE, 2)
                 if direction != ".":
-                    color = RED if selected and collision else ORANGE if selected else ACCENT
+                    color = RED if selected and collision else ORANGE if selected else DIRECTION_COLORS[direction]
                     shift = 5 if selected and collision else 0
                     self.arrow((tx + cell / 2 + shift, ty + cell / 2), direction, cell * .39, color, 4 if cell > 50 else 3)
                 else:
