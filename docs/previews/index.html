@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>箭序 · 第一阶段界面预览</title>
+  <style>
+    :root { color-scheme:light; font-family: "Microsoft YaHei", system-ui, sans-serif; color:#34314c; background:#efebf3 }
+    * { box-sizing:border-box }
+    body { margin:0 }
+    header { padding:24px 32px; display:flex; justify-content:space-between; align-items:center; gap:20px; background:#fffdfc; border-bottom:1px solid #e0dcec }
+    h1 { margin:0 0 8px; font-size:24px; letter-spacing:1px }
+    p { margin:0; color:#79748b; font-size:13px; line-height:1.8 }
+    .badge { flex-shrink:0; color:#8d642f; background:#f3e6d2; padding:9px 15px; border-radius:30px; font-size:13px }
+    main { max-width:1230px; padding:24px; margin:auto; display:grid; grid-template-columns:170px minmax(0,960px); gap:24px }
+    nav { display:flex; flex-direction:column; gap:8px }
+    button { font:inherit; cursor:pointer; border:1px solid #e0dcec; background:#fffdfc; border-radius:12px; padding:14px 16px; text-align:left; color:#716486; font-size:14px }
+    button[aria-pressed="true"] { background:#7265a8; color:white; border-color:#7265a8 }
+    button:focus-visible { outline:3px solid #bd782e; outline-offset:3px }
+    .number { opacity:.6; margin-right:12px; font-size:11px }
+    .note { padding:14px 4px; font-size:12px }
+    figure { margin:0 }
+    img { display:block; width:100%; height:auto; border-radius:16px; box-shadow:0 10px 38px #3c2d5710; border:1px solid #e0dcec }
+    figcaption { padding:15px 4px; font-size:13px; line-height:1.8; color:#716486 }
+    @media(max-width:760px) { header { padding:20px; flex-wrap:wrap } main { padding:16px; grid-template-columns:1fr; gap:16px } nav { flex-direction:row; flex-wrap:wrap; gap:6px } button { padding:10px 12px } .note { flex-basis:100%; padding:4px } h1 {font-size:21px} }
+  </style>
+</head>
+<body>
+  <header>
+    <div><h1>箭序 · 界面预览</h1><p>请确认配色、布局、箭头大小和文字清晰度。画面由项目中的 Pygame 代码直接绘制。</p></div>
+    <span class="badge">第一阶段 / 等待界面确认</span>
+  </header>
+  <main>
+    <nav aria-label="选择预览画面">
+      <button data-scene="home" aria-pressed="true"><span class="number">01</span>开始界面</button>
+      <button data-scene="levels" aria-pressed="false"><span class="number">02</span>关卡选择</button>
+      <button data-scene="game" aria-pressed="false"><span class="number">03</span>游戏界面</button>
+      <button data-scene="hint" aria-pressed="false"><span class="number">04</span>提示效果</button>
+      <button data-scene="collision" aria-pressed="false"><span class="number">05</span>碰撞反馈</button>
+      <button data-scene="win" aria-pressed="false"><span class="number">06</span>单关通关</button>
+      <button data-scene="fail" aria-pressed="false"><span class="number">07</span>挑战失败</button>
+      <button data-scene="complete" aria-pressed="false"><span class="number">08</span>全部通关</button>
+      <p class="note">当前是静态界面样例。关卡解锁、成绩、提示和碰撞均为展示数据；玩法、音效与存档将在界面确认后实现。</p>
+    </nav>
+    <figure>
+      <img id="screen" src="home.png" width="960" height="800" alt="箭序开始界面">
+      <figcaption id="description" aria-live="polite">开始界面：左侧说明与入口，右侧示意棋盘，底部用三个步骤介绍玩法。</figcaption>
+    </figure>
+  </main>
+  <script>
+    const descriptions = {
+      home: '开始界面：左侧说明与入口，右侧示意棋盘，底部用三个步骤介绍玩法。',
+      levels: '关卡选择：示例展示已完成、可挑战和待解锁三种状态；实际初始仅解锁第一关。',
+      game: '游戏界面：顶部为关卡、剩余箭头和机会；底部为提示、重开和选关。此处棋盘是用于确认视觉的样例。',
+      hint: '提示效果：金色边框和箭头突出一个畅通方向，消耗一次提示；不自动消除。',
+      collision: '碰撞反馈：红色区分被点击箭头和最近阻挡者，机会减少一次。这里展示动画中的静态效果。',
+      win: '单关通关：背景棋盘清空，显示本次失误和提示使用次数，可以下一关、重玩或选关。',
+      fail: '挑战失败：背景机会归零，保留未清空的棋盘，结果面板提供重试和返回入口。',
+      complete: '全部通关：显示最终完成状态，并提供从第一关重玩和返回选关。'
+    };
+    for (const button of document.querySelectorAll('[data-scene]')) {
+      button.addEventListener('click', () => {
+        for (const item of document.querySelectorAll('[data-scene]')) item.setAttribute('aria-pressed', String(item === button));
+        const scene = button.dataset.scene;
+        document.querySelector('#screen').src = `${scene}.png`;
+        document.querySelector('#screen').alt = `箭序${button.textContent.slice(2).trim()}`;
+        document.querySelector('#description').textContent = descriptions[scene];
+      });
+    }
+  </script>
+</body>
+</html>

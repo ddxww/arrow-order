@@ -1,0 +1,66 @@
+{
+  "home": {
+    "size": [
+      960,
+      800
+    ],
+    "text_runs": 26,
+    "text_overflow": []
+  },
+  "levels": {
+    "size": [
+      960,
+      800
+    ],
+    "text_runs": 40,
+    "text_overflow": []
+  },
+  "game": {
+    "size": [
+      960,
+      800
+    ],
+    "text_runs": 23,
+    "text_overflow": []
+  },
+  "hint": {
+    "size": [
+      960,
+      800
+    ],
+    "text_runs": 23,
+    "text_overflow": []
+  },
+  "collision": {
+    "size": [
+      960,
+      800
+    ],
+    "text_runs": 23,
+    "text_overflow": []
+  },
+  "win": {
+    "size": [
+      960,
+      800
+    ],
+    "text_runs": 30,
+    "text_overflow": []
+  },
+  "fail": {
+    "size": [
+      960,
+      800
+    ],
+    "text_runs": 31,
+    "text_overflow": []
+  },
+  "complete": {
+    "size": [
+      960,
+      800
+    ],
+    "text_runs": 30,
+    "text_overflow": []
+  }
+}
