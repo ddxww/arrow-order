@@ -12,15 +12,16 @@ ROOT = Path(__file__).resolve().parents[1]
 SIZE = (960, 800)
 SCENES = ("home", "levels", "game", "hint", "collision", "win", "fail", "complete")
 SCENE_NAMES = ("开始界面", "关卡选择", "游戏界面", "提示效果", "碰撞反馈", "单关通关", "挑战失败", "全部通关")
-BG = "#F8F6F2"
-INK = "#34314C"
-MUTED = "#79748B"
-ACCENT = "#7265A8"
-PALE = "#EEEAF7"
-LINE = "#E0DCEC"
-WHITE = "#FFFDFC"
-ORANGE = "#B67A39"
-RED = "#B95770"
+BG = "#000000"
+PANEL = "#17161B"
+INK = "#F5F4F7"
+MUTED = "#B7B3C2"
+ACCENT = "#A99AE8"
+PALE = "#24202E"
+LINE = "#403A49"
+WHITE = "#FFFFFF"
+ORANGE = "#F0B45A"
+RED = "#F26A83"
 # Direction colors: left red, down yellow, right blue, and up green.
 DIRECTION_COLORS = {"L": "#D94B5B", "D": "#E0A62B", "R": "#3F78C5", "U": "#4AA36B"}
 DEMO_BOARD = (".U.RD", "U.L.D", ".RD.L", "D.U.L", "L.R.R")
@@ -110,7 +111,7 @@ class Painter:
         self.text(label, rect[0] + rect[2] / 2, rect[1] + (rect[3] - size) / 2, size, fg, center=True)
 
     def button(self, label, rect, target, primary=False, enabled=True):
-        fill = ACCENT if primary else WHITE
+        fill = ACCENT if primary else PANEL
         fg = WHITE if primary else ACCENT
         if not enabled:
             fill, fg = PALE, MUTED
@@ -125,7 +126,7 @@ class Painter:
         self.text("箭序", 86, 31, 24)
         self.line((148, 36), (148, 56))
         self.text("一箭又一箭", 164, 39, 14, MUTED)
-        self.pill("本地 · 离线", (714, 29, 102, 32))
+        self.pill("本地 · 离线", (614, 29, 102, 32))
         self.button("音效 开", (831, 27, 89, 36), "mute")
 
     def footer(self):
@@ -137,14 +138,14 @@ class Painter:
         n = len(rows)
         pad = 18
         extent = cell * n
-        self.box((x - pad + 2, y - pad + 7, extent + pad * 2, extent + pad * 2), "#E8E2EE", 24)
-        self.box((x - pad, y - pad, extent + pad * 2, extent + pad * 2), WHITE, 24, LINE)
+        self.box((x - pad + 2, y - pad + 7, extent + pad * 2, extent + pad * 2), "#0B0A0D", 24)
+        self.box((x - pad, y - pad, extent + pad * 2, extent + pad * 2), PANEL, 24, LINE)
         for row, values in enumerate(rows):
             for col, direction in enumerate(values):
                 tx, ty = x + col * cell, y + row * cell
                 selected = (row, col) == highlight
                 is_blocker = collision and (row, col) == (0, 4)
-                fill = "#FAEEDD" if selected and not collision else "#F9E6ED" if selected or is_blocker else PALE
+                fill = "#3B2D18" if selected and not collision else "#3D202A" if selected or is_blocker else PALE
                 self.box((tx + 4, ty + 4, cell - 8, cell - 8), fill, 12)
                 if selected or is_blocker:
                     self.box((tx + 4, ty + 4, cell - 8, cell - 8), fill, 12, RED if collision else ORANGE, 2)
@@ -153,7 +154,7 @@ class Painter:
                     shift = 5 if selected and collision else 0
                     self.arrow((tx + cell / 2 + shift, ty + cell / 2), direction, cell * .39, color, 4 if cell > 50 else 3)
                 else:
-                    self.circle((tx + cell / 2, ty + cell / 2), 2, "#D8CFE9")
+                    self.circle((tx + cell / 2, ty + cell / 2), 2, "#5A5367")
 
     def home(self):
         self.text("A LITTLE ORDER. A LITTLE JOY.", 76, 153, 12, ACCENT)
@@ -167,11 +168,11 @@ class Painter:
         self.pill("3 次机会", (181, 509, 91, 28), size=12)
         self.pill("一点提示", (284, 509, 91, 28), size=12)
         self.board(552, 192, 59, highlight=(0, 1))
-        self.pill("从一支畅通的箭头开始", (581, 520, 231, 34), "#F5E9D8", ORANGE)
+        self.pill("从一支畅通的箭头开始", (581, 520, 231, 34), "#382B18", ORANGE)
         cards = (("01", "观察方向", "箭头只能沿自身方向飞出。"), ("02", "解除阻挡", "先送走挡在前面的箭头。"), ("03", "清空棋盘", "用三次机会，找到通关顺序。"))
         for i, (num, title, body) in enumerate(cards):
             x = 64 + i * 283
-            self.box((x, 602, 266, 103), WHITE, 16, LINE)
+            self.box((x, 602, 266, 103), PANEL, 16, LINE)
             self.text(num, x + 19, 622, 14, ORANGE)
             self.text(title, x + 55, 622, 18)
             self.text(body, x + 19, 663, 13, MUTED)
@@ -184,14 +185,14 @@ class Painter:
         self.text("关卡 06 / 06     ·     挑战" if variant == "complete" else "关卡 01 / 06     ·     入门", 64, 108, 13, ACCENT)
         self.text("最后之序" if variant == "complete" else "初识箭序", 63, 143, 33)
         self.text("看清方向，先从畅通的箭头开始。", 65, 194, 15, MUTED)
-        self.box((562, 110, 149, 83), WHITE, 16, LINE)
+        self.box((562, 110, 149, 83), PANEL, 16, LINE)
         self.text("剩余箭头", 580, 124, 12, MUTED)
         self.text(str(sum(ch != "." for row in rows for ch in row)), 580, 150, 26)
         self.text("支", 623, 161, 12, MUTED)
-        self.box((726, 110, 170, 83), WHITE, 16, LINE)
+        self.box((726, 110, 170, 83), PANEL, 16, LINE)
         self.text("剩余机会", 744, 124, 12, MUTED)
         for i in range(3):
-            self.circle((754 + i * 26, 166), 8, "#DEDAE5" if i >= mistakes else "#B19ACE")
+            self.circle((754 + i * 26, 166), 8, "#45414A" if i >= mistakes else "#A99AE8")
         self.text(f"{mistakes} / 3", 833, 159, 13, MUTED)
         highlight = (0, 3) if variant == "collision" else (0, 1) if variant == "hint" else None
         self.board(300, 257, 360 / len(rows), rows=rows, highlight=highlight, collision=variant == "collision")
@@ -221,8 +222,8 @@ class Painter:
         for i, name in enumerate(names):
             x, y = 64 + i % 3 * 283, 241 + i // 3 * 212
             unlocked = i < 2
-            self.box((x, y, 266, 187), WHITE if unlocked else "#F0EDF3", 20, ACCENT if i == 1 else LINE)
-            self.text(f"0{i + 1}", x + 23, y + 23, 33, ACCENT if unlocked else "#AAA2BA")
+            self.box((x, y, 266, 187), PANEL if unlocked else "#111014", 20, ACCENT if i == 1 else LINE)
+            self.text(f"0{i + 1}", x + 23, y + 23, 33, ACCENT if unlocked else "#77717F")
             self.pill("已完成" if i == 0 else "可挑战" if i == 1 else "待解锁", (x + 164, y + 24, 80, 28), PALE, ACCENT if unlocked else MUTED, 12)
             self.text(name, x + 23, y + 80, 22, INK if unlocked else MUTED)
             self.text(f"{('入门', '进阶', '挑战')[i // 2]}   ·   {5 + i // 2} × {5 + i // 2}", x + 24, y + 118, 13, MUTED)
@@ -239,10 +240,10 @@ class Painter:
         overlay = pygame.Surface(self.canvas.get_size(), pygame.SRCALPHA)
         overlay.fill((53, 45, 75, 83))
         self.canvas.blit(overlay, (0, 0))
-        self.box((240, 197, 480, 424), "#D7CFE0", 26)
-        self.box((240, 189, 480, 424), WHITE, 26)
+        self.box((240, 197, 480, 424), "#0B0A0D", 26)
+        self.box((240, 189, 480, 424), PANEL, 26, LINE)
         failed = kind == "fail"
-        self.circle((480, 260), 31, "#F9E6ED" if failed else PALE)
+        self.circle((480, 260), 31, "#3D202A" if failed else PALE)
         if failed:
             self.text("!", 480, 242, 36, RED, center=True)
         else:
@@ -252,7 +253,7 @@ class Painter:
         self.text(title, 480, 317, 29, INK, center=True)
         subtitle = "三次机会已用完。换个顺序，再试一次。" if failed else "谢谢你，把每一支箭头送往了出口。" if kind == "complete" else "每解除一个阻挡，就离出口更近一步。"
         self.text(subtitle, 480, 370, 15, MUTED, center=True)
-        self.box((287, 410, 386, 62), "#F1EDF8", 13)
+        self.box((287, 410, 386, 62), PALE, 13)
         self.text("失误   3 / 3" if failed else "失误   0 / 3", 322, 434, 16, RED if failed else ACCENT)
         self.line((480, 425), (480, 458))
         self.text("提示   1 / 3", 520, 434, 16, ACCENT)

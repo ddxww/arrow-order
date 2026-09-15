@@ -53,7 +53,7 @@ def main():
         scale = min(sw / SIZE[0], sh / SIZE[1])
         fitted = (max(1, round(SIZE[0] * scale)), max(1, round(SIZE[1] * scale)))
         offset = ((sw - fitted[0]) // 2, (sh - fitted[1]) // 2)
-        screen.fill("#EBE5F0")
+        screen.fill("#000000")
         screen.blit(pygame.transform.smoothscale(surface, fitted), offset)
         pygame.display.flip()
         for event in pygame.event.get():

@@ -19,7 +19,7 @@ import pygame
 
 from arrowgame.levels import LEVELS
 from arrowgame.effects import DangerVignette, HEARTBEAT_PERIOD, HEARTBEAT_PULSES
-from arrowgame.preview_ui import Painter, BG, INK, MUTED, ACCENT, PALE, LINE, WHITE, ORANGE, RED, DIRECTION_COLORS
+from arrowgame.preview_ui import Painter, BG, PANEL, INK, MUTED, ACCENT, PALE, LINE, WHITE, ORANGE, RED, DIRECTION_COLORS
 from arrowgame.rules import can_exit, first_blocker
 from arrowgame.scoring import LevelTimer, award_stars, better_record, clean_record, format_time
 from arrowgame.endless import generate_level
@@ -340,11 +340,11 @@ class Game:
         p.pill("3 次机会", (181, 509, 91, 28), size=12)
         p.pill("3 次提示", (284, 509, 91, 28), size=12)
         p.board(552, 192, 59, highlight=(0, 1))
-        p.pill("从一支畅通的箭头开始", (581, 520, 231, 34), "#F5E9D8", ORANGE)
+        p.pill("从一支畅通的箭头开始", (581, 520, 231, 34), "#382B18", ORANGE)
         cards = (("01", "观察方向", "箭头只能沿自身方向飞出。"), ("02", "解除阻挡", "先送走挡在前面的箭头。"), ("03", "清空棋盘", "用三次机会，找到通关顺序。"))
         for i, (num, title, body) in enumerate(cards):
             x = 64 + i * 283
-            p.box((x, 602, 266, 103), WHITE, 16, LINE)
+            p.box((x, 602, 266, 103), PANEL, 16, LINE)
             p.text(num, x + 19, 622, 14, ORANGE)
             p.text(title, x + 55, 622, 18)
             p.text(body, x + 19, 663, 13, MUTED)
@@ -359,8 +359,8 @@ class Game:
             x, y = 64 + i % 3 * 283, 241 + i // 3 * 212
             unlocked = i < self.unlocked
             completed = str(i) in self.best
-            p.box((x, y, 266, 187), WHITE if unlocked else "#F0EDF3", 20, ACCENT if unlocked and i == self.level_index else LINE)
-            p.text(f"0{i + 1}", x + 23, y + 23, 33, ACCENT if unlocked else "#AAA2BA")
+            p.box((x, y, 266, 187), PANEL if unlocked else "#111014", 20, ACCENT if unlocked and i == self.level_index else LINE)
+            p.text(f"0{i + 1}", x + 23, y + 23, 33, ACCENT if unlocked else "#77717F")
             p.pill("已完成" if completed else "可挑战" if unlocked else "待解锁", (x + 164, y + 24, 80, 28), PALE, ACCENT if unlocked else MUTED, 12)
             p.text(level.name, x + 23, y + 80, 22, INK if unlocked else MUTED)
             p.text(f"{level.difficulty}   ·   {len(level.rows)} × {len(level.rows)}", x + 24, y + 118, 13, MUTED)
@@ -387,16 +387,16 @@ class Game:
         p.text(heading, 64, 108, 13, ACCENT)
         p.text(level.name, 63, 143, 33)
         p.text(level.tip, 65, 194, 15, MUTED)
-        p.box((562, 110, 149, 83), WHITE, 16, LINE)
+        p.box((562, 110, 149, 83), PANEL, 16, LINE)
         p.text("剩余箭头", 580, 124, 12, MUTED)
         p.text(str(self.count_arrows()), 580, 150, 26)
         p.text("支", 623, 161, 12, MUTED)
-        p.box((726, 110, 170, 83), WHITE, 16, LINE)
+        p.box((726, 110, 170, 83), PANEL, 16, LINE)
         p.text("剩余机会", 744, 124, 12, MUTED)
         for i in range(3):
-            p.circle((754 + i * 26, 166), 8, "#DEDAE5" if i >= self.mistakes else "#B19ACE")
+            p.circle((754 + i * 26, 166), 8, "#45414A" if i >= self.mistakes else "#A99AE8")
         p.text(f"{self.mistakes} / 3", 833, 159, 13, MUTED)
-        p.box((64, 253, 180, 148), WHITE, 16, LINE)
+        p.box((64, 253, 180, 148), PANEL, 16, LINE)
         p.text("本关用时", 82, 273, 13, MUTED)
         p.text(format_time(self.timer.elapsed_ms()), 81, 303, 28, ACCENT)
         if self.mode == 'endless':
@@ -422,7 +422,7 @@ class Game:
         for position, color in ((highlight, highlight_color),):
             if position and self.board[position[0]][position[1]] != "." and not self.animation:
                 r, c = position
-                p.box((x+c*cell+4, y+r*cell+4, cell-8, cell-8), "#FAEEDD" if self.hint_active else "#E5DFF4", 12, color, 2)
+                p.box((x+c*cell+4, y+r*cell+4, cell-8, cell-8), "#3B2D18" if self.hint_active else "#29233A", 12, color, 2)
                 p.arrow((x+(c+.5)*cell,y+(r+.5)*cell), self.board[r][c], cell*.39, color, 4)
         if self.animation and self.animation["kind"] == "collision":
             a = self.animation
@@ -430,7 +430,7 @@ class Game:
             for position in ((a["row"], a["col"]), a["blocker"]):
                 if position:
                     r,c = position
-                    p.box((x+c*cell+4,y+r*cell+4,cell-8,cell-8),"#F9E6ED",12,RED,2)
+                    p.box((x+c*cell+4,y+r*cell+4,cell-8,cell-8),"#3D202A",12,RED,2)
                     dr,dc={"U":(-1,0),"D":(1,0),"L":(0,-1),"R":(0,1)}[self.board[r][c]]
                     shift = 7*math.sin(elapsed*math.pi) if position == (a["row"],a["col"]) else 0
                     p.arrow((x+(c+.5)*cell+dc*shift,y+(r+.5)*cell+dr*shift), self.board[r][c],cell*.39,RED,4)
@@ -458,8 +458,8 @@ class Game:
                 points.append((round((cx + math.cos(angle)*r)*2),
                                round((center_y + math.sin(angle)*r)*2)))
             filled = index < count
-            pygame.draw.polygon(self.painter.canvas, '#E4B44C' if filled else '#E8E2D9', points)
-            pygame.draw.polygon(self.painter.canvas, '#B98A2D' if filled else '#C9C2B9', points, 2)
+            pygame.draw.polygon(self.painter.canvas, '#E4B44C' if filled else '#343139', points)
+            pygame.draw.polygon(self.painter.canvas, '#B98A2D' if filled else '#5A5560', points, 2)
 
     def make_three_star_panel(self):
         try:
@@ -467,7 +467,7 @@ class Game:
         except (pygame.error, OSError):
             return None
         panel = pygame.Surface((520, 744), pygame.SRCALPHA)
-        pygame.draw.rect(panel, WHITE, panel.get_rect(), border_radius=32)
+        pygame.draw.rect(panel, PANEL, panel.get_rect(), border_radius=32)
         width = 480
         height = round(width * photo.get_height() / photo.get_width())
         panel.blit(pygame.transform.smoothscale(photo, (width, height)), (20, 20))
@@ -485,14 +485,14 @@ class Game:
         celebrated = self.result_stars == 3 and self.three_star_panel is not None
         x = 64 if celebrated else 206
         center = x + 274
-        p.box((x, 170, 548, 460), WHITE, 26)
+        p.box((x, 170, 548, 460), PANEL, 26, LINE)
         title = '六关完成，箭箭有序' if self.scene == 'complete' else f'{LEVELS[self.level_index].name}，顺利解开！'
         p.text(title, center, 201, 27, INK, center=True)
         p.text('三星到手，这次真的强！' if self.result_stars == 3 else '再快一点、稳一点，挑战三颗星。', center, 246, 15, MUTED, center=True)
         self.draw_stars(self.result_stars, center, 304)
         fast = self.timer.elapsed_ms() <= LEVELS[self.level_index].target_seconds * 1000
         for i, (label, earned) in enumerate((('通关 +1 星', True), ('机会 +1 星', self.mistakes >= 2), ('速度 +1 星', fast))):
-            p.pill(label if earned else label.replace('+1', '+0'), (x+35+i*162, 349, 154, 29), '#FAF0D9' if earned else '#F0EDF3', ORANGE if earned else MUTED, 12)
+            p.pill(label if earned else label.replace('+1', '+0'), (x+35+i*162, 349, 154, 29), '#382B18' if earned else PALE, ORANGE if earned else MUTED, 12)
         p.text(f'用时 {format_time(self.timer.elapsed_ms())}   ·   目标 {LEVELS[self.level_index].target_seconds} 秒', center, 398, 17, ACCENT, center=True)
         p.text(f'剩余机会 {self.mistakes} / 3   ·   使用提示 {3-self.hints} / 3', center, 432, 14, MUTED, center=True)
         if self.scene == 'complete':
@@ -508,7 +508,7 @@ class Game:
 
     def draw_endless_win(self):
         p = self.painter
-        p.box((206, 170, 548, 460), WHITE, 26)
+        p.box((206, 170, 548, 460), PANEL, 26, LINE)
         p.text(f'第 {self.endless_round} 关，顺利通过！', 480, 217, 29, INK, center=True)
         p.text(f'本轮已通关 {self.endless_clears} 关', 480, 284, 25, ACCENT, center=True)
         message = '特别 CG 已解锁，继续挑战更多关卡。' if self.endless_reward_shown else f'再通过 {3-self.endless_clears} 关，解锁特别 CG。'
@@ -528,7 +528,7 @@ class Game:
         alpha = round(255 * fade * fade * (3-2*fade))
         p.text('无尽模式', 64, 111, 31)
         p.text(f'本轮已通关 {self.endless_clears} 关，恭喜解锁！可以截图保存这份通关纪念。', 65, 161, 15, MUTED)
-        p.box((64, 192, 832, 486), WHITE, 23, LINE)
+        p.box((64, 192, 832, 486), PANEL, 23, LINE)
         if self.cg_wechat is not None:
             self.cg_wechat.set_alpha(alpha)
             p.canvas.blit(self.cg_wechat, (88*2, 210*2))
@@ -554,7 +554,7 @@ class Game:
             return None
         overlay = pygame.Surface(self.painter.canvas.get_size()).convert()
         overlay.fill(BG)
-        pygame.draw.rect(overlay, WHITE, (500, 260, 920, 1080), border_radius=40)
+        pygame.draw.rect(overlay, PANEL, (500, 260, 920, 1080), border_radius=40)
         width = 800
         height = round(width * photo.get_height() / photo.get_width())
         photo = pygame.transform.smoothscale(photo, (width, height))
@@ -577,7 +577,7 @@ class Game:
         width = round(height * photo.get_width() / photo.get_height())
         photo = pygame.transform.smoothscale(photo, (width, height))
         x, y = (overlay.get_width() - width) // 2, 160
-        pygame.draw.rect(overlay, WHITE, (x - 14, y - 14, width + 28, height + 28), border_radius=22)
+        pygame.draw.rect(overlay, PANEL, (x - 14, y - 14, width + 28, height + 28), border_radius=22)
         overlay.blit(photo, (x, y))
         return overlay
 
@@ -612,13 +612,13 @@ class Game:
         if kind not in ('fail', 'fail_intro'):
             self.draw_win_result()
             return
-        p.box((240, 189, 480, 424), WHITE, 26)
-        p.circle((480, 260), 31, "#F9E6ED")
+        p.box((240, 189, 480, 424), PANEL, 26, LINE)
+        p.circle((480, 260), 31, "#3D202A")
         p.text("!", 480, 242, 36, RED, center=True)
         title = "这一次，差一点点"
         subtitle = "三次机会已用完。换个顺序，再试一次。"
         p.text(title, 480, 317, 29, INK, center=True); p.text(subtitle, 480, 370, 15, MUTED, center=True)
-        p.box((287, 410, 386, 62), "#F1EDF8", 13)
+        p.box((287, 410, 386, 62), PALE, 13)
         p.text(f"失误   {3 - self.mistakes} / 3", 322, 434, 16, RED); p.line((480, 425), (480, 458)); p.text(f"提示   {3 - self.hints} / 3", 520, 434, 16, ACCENT)
         self.button("再试一次", (287, 494, 386, 49), "restart", True)
         self.button("返回首页", (287, 557, 186, 34), "home")
@@ -756,7 +756,7 @@ class Game:
                 elif event.type == pygame.VIDEORESIZE: self.screen = pygame.display.set_mode(event.size, pygame.RESIZABLE)
                 elif event.type == pygame.MOUSEMOTION and self.scene == "playing" and self.animation is None: self.hover = self.board_cell(self.logical_point(event.pos))
                 elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1: self.click(self.logical_point(event.pos))
-            self.update(); frame = self.render(); sw, sh = self.screen.get_size(); scale = min(sw / SIZE[0], sh / SIZE[1]); fitted = (round(SIZE[0]*scale), round(SIZE[1]*scale)); offset=((sw-fitted[0])//2,(sh-fitted[1])//2); self.screen.fill("#EBE5F0"); self.screen.blit(pygame.transform.smoothscale(frame, fitted), offset); pygame.display.flip(); clock.tick(FPS)
+            self.update(); frame = self.render(); sw, sh = self.screen.get_size(); scale = min(sw / SIZE[0], sh / SIZE[1]); fitted = (round(SIZE[0]*scale), round(SIZE[1]*scale)); offset=((sw-fitted[0])//2,(sh-fitted[1])//2); self.screen.fill(BG); self.screen.blit(pygame.transform.smoothscale(frame, fitted), offset); pygame.display.flip(); clock.tick(FPS)
         self.save_progress(); pygame.quit()
 
 

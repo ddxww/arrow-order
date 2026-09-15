@@ -187,8 +187,13 @@ class GameTests(unittest.TestCase):
             strong = game.render()
             now.return_value = 101.40  # Between beats.
             quiet = game.render()
-            self.assertLess(strong.get_at((4, 400)).g, quiet.get_at((4, 400)).g)
-            self.assertLess(quiet.get_at((4, 400)).g, baseline.get_at((4, 400)).g)
+            strong_edge = strong.get_at((4, 400))
+            quiet_edge = quiet.get_at((4, 400))
+            baseline_edge = baseline.get_at((4, 400))
+            self.assertGreater(strong_edge.r, quiet_edge.r)
+            self.assertGreater(quiet_edge.r, baseline_edge.r)
+            self.assertGreater(strong_edge.r - strong_edge.g,
+                               quiet_edge.r - quiet_edge.g)
             board_rect = pygame.Rect(285, 243, 390, 390)
             self.assertEqual(pygame.image.tobytes(strong.subsurface(board_rect), 'RGB'),
                              pygame.image.tobytes(baseline.subsurface(board_rect), 'RGB'))
