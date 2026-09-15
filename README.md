@@ -1,77 +1,75 @@
 # 一箭又一箭 · 箭序
 
-使用 Python 与 pygame-ce 开发的单格箭头解谜游戏，课程项目。
+一款使用 Python 和 pygame-ce 开发的单格箭头解谜游戏。玩家需要按箭头方向依次点击棋盘上的箭头，在有限机会内完成每一关。
 
-**当前进度：阶段 2，完整可玩版已实现，正在进行最终试玩与材料整理。**
+## 当前版本
 
-已准备六个可解关卡、路径规则、碰撞和飞出动画、提示、选关解锁、最佳成绩、存档、轻量音效和原创循环背景音乐。每关仍需要用户本人实际试玩并记录反馈；自动化验证不替代本人试玩。
+- 6 个递进的普通关卡，支持选关解锁、提示、重开和最佳成绩保存。
+- 每关最多 3 颗星：成功通关、剩余至少 2 次机会、在目标时间内完成分别获得 1 星。
+- 柔和的原创循环背景音乐《安静的午后》、操作音效和胜利音效，音乐与音效可以分别静音。
+- 失败提示、最后一次机会提示、红色残血视野边缘和渐入渐出的表情图片动画。
+- 无尽模式：随机生成可解棋盘，难度参考普通关卡 1～6，不评价星级。
+- 无尽模式累计通关 3 次后显示特殊 CG，包括用户提供的图片、GIF 和活动文案。
+- 首页右侧提供放大的 GitHub 图标按钮，点击后打开项目主页：<https://github.com/ddxww/arrow-order>。
 
-## Windows 预览程序
+## Windows 运行
 
-完整可玩程序为 `dist/ArrowOrder.exe`；阶段 1 的静态界面预览仍在 `dist/ArrowOrder-Preview-Windows.zip`。完整程序无需安装 Python，也不需要联网，首次启动后会在用户 APPDATA 下保存进度。领取 EXE 时，请同时保留旁边的 `OFL.txt` 字体许可。
+完整游戏可直接运行 `dist/ArrowOrder.exe`，不需要安装 Python 或联网。首次启动后，游戏会在用户的 APPDATA 目录保存进度。发布 EXE 时请同时保留字体许可文件 `assets/fonts/OFL.txt`。
 
-完整程序中左键点击箭头，`R` 或按钮重开，提示按钮显示剩余提示，结果页提供下一关和选关；`Esc` 退出。静态预览仍按 `1`—`8` 切换画面，完整说明见 [预览程序交付说明](docs/PREVIEW_DELIVERY.md)。
-
-## 看预览
-
-直接打开 [交互预览画廊](docs/previews/index.html)，切换首页、选关、游戏、提示、碰撞、通关、失败和最终完成画面。浏览器画廊不需要 Python。
-
-![首页](docs/previews/home.png)
-
-![游戏界面](docs/previews/game.png)
-
-## 运行 Pygame 预览
-
-开发环境：Windows、CPython 3.13.5、pygame-ce 2.5.8。字体随项目提供，不依赖系统字体，不需要联网运行。
+在开发环境运行：
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\.venv\Scripts\python.exe preview.py
-```
-
-运行完整游戏：
-
-```powershell
 .\.venv\Scripts\python.exe game.py
 ```
 
-预览窗口支持缩放。按 `1`—`8` 切换画面，`Esc` 退出；部分导航按钮可以切换预览画面。棋盘不执行消除逻辑，声音按钮也只是外观预览。
+操作说明：左键点击箭头；按 `R` 或点击重开按钮重新开始；提示按钮显示剩余提示；`Esc` 退出。通关后可以进入下一关或打开选关页面。
 
-导出截图（无可见窗口）：
+## 无尽模式
+
+无尽模式的棋盘大小为 5×5 至 7×7，箭头数量和阻挡层数参考普通关卡的难度范围。每局重新开始时恢复 3 次机会和 3 次提示，只记录本轮用时与通关次数，不影响普通关卡存档。
+
+累计通关 3 次会解锁一次特殊 CG。CG 页面会显示用户提供的微信图片、循环 GIF，以及文案“加作者凭借这个通过图片可以获得0.01元🧧”。点击“继续挑战”可以生成下一张随机棋盘；失败后可以重试当前棋盘。
+
+## 音乐与紧张效果
+
+普通关卡使用离线合成的 72 BPM 柔和循环音乐，音频文件位于 `assets/audio/quiet_afternoon.wav`。当只剩 1 次机会时，音乐会降低音量并叠加双拍心跳，同时显示红色视野边缘；心跳和红边会平滑渐入，并在紧张状态结束后淡出。失败和最后一次机会图片也会渐入、停留约 1 秒后渐出，避免突然出现。
+
+## 预览与测试
+
+浏览器交互预览位于 [docs/previews/index.html](docs/previews/index.html)，不需要 Python。运行预览程序：
 
 ```powershell
-.\.venv\Scripts\python.exe preview.py --export
+.\.venv\Scripts\python.exe preview.py
 ```
 
-资源路径基于脚本文件定位，因此也可从其他目录通过 `preview.py` 的绝对路径启动。
+运行自动化测试：
 
-## 设计与记录
+```powershell
+python -m unittest tests.test_endless tests.test_game tests.test_scoring
+```
 
-- [需求与验收标准](docs/PRD.md)
-- [开发记录、PSP 与本人试玩记录](docs/DEVELOPMENT.md)
-- [来源与字体许可说明](docs/REFERENCES.md)
-- [阶段 1 检查记录](docs/PREVIEW_REVIEW.md)
+## 项目目录
 
-## 字体
+- `game.py`：完整游戏入口。
+- `arrowgame/`：关卡、评分、特效、无尽模式和特殊 CG 逻辑。
+- `assets/`：字体、图片、GIF、音乐和音效资源。
+- `tests/`：游戏逻辑、评分和无尽模式测试。
+- `tools/`：音乐、CG 素材和 Windows 打包工具。
+- `docs/`：需求、开发记录、来源说明和预览材料。
 
-`assets/fonts/ArrowOrder-Regular.ttf` 与 `ArrowOrder-Semibold.ttf` 是 Noto Sans SC 的常规/半粗静态字重子集，包含 GB2312 字符集和界面符号，已改名为 ArrowOrder Sans。完整字体许可见 [SIL OFL 1.1](assets/fonts/OFL.txt)。
+## 重建资源和打包
 
-运行不需要重新生成字体。仅开发者重建资源时，运行 `tools/fetch_font.py` 下载 Google Fonts 官方源字体，然后在安装了 `fonttools` 的环境执行 `tools/prepare_font.py`。字体生成工具不属于游戏运行依赖。
-
-## 项目范围
-
-完整版本含 6 个递进关卡、每关 3 次失误机会与 3 次提示、选关解锁、最佳成绩保存、可分别静音的音效与原创背景音乐。背景音乐由程序在本地合成，不包含第三方音乐素材。每关需用户本人实际试玩；自动化检查不能代替本人试玩。GitHub 仓库：<https://github.com/ddxww/arrow-order>；学号待最终材料阶段补齐。
-
-## 重建 Windows 预览包
-
-在 Windows 开发环境运行：
+安装构建依赖后，可使用以下命令重建 Windows 程序：
 
 ```powershell
 .\.venv\Scripts\python.exe -m pip install -r requirements-build.txt
-.\tools\build_preview.ps1
+.\tools\build_game.ps1
 ```
 
-生成 `dist/ArrowOrder-Preview.exe` 与包含说明和字体许可的ZIP。已对EXE进行无窗口运行检查：8张截图全部导出，结果与源码渲染完全一致。此项为打包验证，非本人试玩。
+音乐由 `tools/compose_music.py` 离线合成，GIF 素材可使用 `tools/prepare_cg.py` 重建；运行游戏不需要 Pillow 或联网。
 
-完整游戏打包：`.\tools\build_game.ps1`（生成 `dist/ArrowOrder.exe`）。
+## 字体与来源
+
+项目自带 `ArrowOrder-Regular.ttf` 和 `ArrowOrder-Semibold.ttf`，字体许可见 [SIL OFL 1.1](assets/fonts/OFL.txt)。其他素材来源和许可记录见 [docs/REFERENCES.md](docs/REFERENCES.md)。

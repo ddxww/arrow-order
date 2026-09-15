@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from types import MappingProxyType
 from .rules import solve_order, validate_board
+from .scoring import time_target
 
 @dataclass(frozen=True)
 class Level:
@@ -17,6 +18,8 @@ class Level:
     def layout(self) -> tuple[tuple[str, ...], ...]: return tuple(tuple(row) for row in self.rows)
     @property
     def arrows(self) -> int: return sum(cell != "." for row in self.rows for cell in row)
+    @property
+    def target_seconds(self) -> int: return time_target(self.arrows)
     @property
     def solution(self) -> tuple[tuple[int, int], ...]:
         order = solve_order(self.layout)

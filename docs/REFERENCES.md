@@ -46,4 +46,14 @@
 
 以上静态字体沿用 SIL OFL 1.1，并保留上游版权说明；改名不改变其许可。分发源码或 EXE 时须同时保留 [OFL.txt](../assets/fonts/OFL.txt)，且遵守 OFL 对字体单独销售、修改名称及许可传递的约定。
 
-无外部图像或音频素材计划。不能将 Windows 系统自带字体直接当作可自由分发的项目资源。
+背景音乐 `assets/audio/quiet_afternoon.wav`（《安静的午后》）由本项目的 `tools/compose_music.py` 编写乐句并合成：72 BPM、40 秒立体声循环，包含和弦铺底、拨弦旋律与短回声。未使用外部录音、采样或商业游戏原声。操作音效也由本项目程序合成。
+
+失败过渡图片 `assets/images/fail_cat.jpg` 由用户在本项目会话中提供，用于失败后的 1 秒展示及淡出；原作者和许可未提供。
+
+最后一次机会的过渡图片 `assets/images/last_chance_cat.jpg` 同样由用户提供，展示 1 秒后淡出；原作者和许可未提供。紧张状态的心跳声由 `SoundKit.make_heartbeat` 程序合成，没有使用外部录音。
+
+三星奖励图片 `assets/images/three_star_cat.jpg`（“这么强？”）由用户提供，原作者和许可未提供。胜利旋律由本项目 `SoundKit.make_victory` 编写及合成，未使用外部音乐或录音。
+
+无尽模式特别 CG 使用用户在会话中提供的微信图片 `assets/cg/wechat.jpg` 和 GIF `assets/cg/author_dance.gif`。`tools/prepare_cg.py` 将 GIF 转为精灵图及帧时长元数据，保持动画播放；未改变图片内的联系方式。CG 的奖励配文由用户指定。红包 emoji 由本机 Segoe UI Emoji 渲染为 PNG，未分发系统字体文件。
+
+不能将 Windows 系统自带字体直接当作可自由分发的项目资源。

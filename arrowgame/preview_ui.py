@@ -60,6 +60,21 @@ class Painter:
     def circle(self, center, radius, color, width=0):
         pygame.draw.circle(self.canvas, color, (round(center[0] * 2), round(center[1] * 2)), round(radius * 2), width * 2)
 
+    def github_icon(self, center, size=18, color=ACCENT):
+        """Small monochrome GitHub mark drawn without an external asset."""
+        cx, cy = center
+        self.circle((cx, cy), size, color)
+        # Cat ears and head in the familiar GitHub mark silhouette.
+        points = [(cx-size*.64, cy-size*.25), (cx-size*.54, cy-size*.78),
+                  (cx-size*.12, cy-size*.55), (cx+size*.12, cy-size*.55),
+                  (cx+size*.54, cy-size*.78), (cx+size*.64, cy-size*.25),
+                  (cx+size*.52, cy+size*.50), (cx+size*.33, cy+size*.72),
+                  (cx-size*.33, cy+size*.72), (cx-size*.52, cy+size*.50)]
+        pygame.draw.polygon(self.canvas, WHITE, [(round(x*2), round(y*2)) for x,y in points])
+        self.circle((cx-size*.2, cy-size*.06), size*.1, color)
+        self.circle((cx+size*.2, cy-size*.06), size*.1, color)
+        pygame.draw.line(self.canvas, color, (round(cx*2), round((cy+size*.04)*2)), (round(cx*2), round((cy+size*.28)*2)), 2)
+
     def text(self, value, x, y, size=18, color=INK, center=False):
         if size not in self.fonts:
             self.fonts[size] = pygame.font.Font(str(self.bold_path if size >= 22 else self.font_path), size * 2)
