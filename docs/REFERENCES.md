@@ -54,6 +54,6 @@
 
 三星奖励图片 `assets/images/three_star_cat.jpg`（“这么强？”）由用户提供，原作者和许可未提供。胜利旋律由本项目 `SoundKit.make_victory` 编写及合成，未使用外部音乐或录音。
 
-无尽模式特别 CG 使用用户在会话中提供的微信图片 `assets/cg/wechat.jpg` 和 GIF `assets/cg/author_dance.gif`。`tools/prepare_cg.py` 将 GIF 转为精灵图及帧时长元数据，保持动画播放；未改变图片内的联系方式。CG 的奖励配文由用户指定。红包 emoji 由本机 Segoe UI Emoji 渲染为 PNG，未分发系统字体文件。
+无尽模式特殊 CG 使用用户在会话中提供的微信图片 `assets/cg/wechat.jpg` 和 GIF `assets/cg/author_dance.gif`。`tools/prepare_cg.py` 将 GIF 转为精灵图及帧时长元数据，保持动画播放；未改变图片内的联系方式。CG 的奖励配文由用户指定。红包 emoji 由本机 Segoe UI Emoji 渲染为 PNG，未分发系统字体文件。
 
 不能将 Windows 系统自带字体直接当作可自由分发的项目资源。

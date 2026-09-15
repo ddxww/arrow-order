@@ -330,7 +330,7 @@ class Game:
         self.button("开始游戏   →", (76, 431, 208, 54), "start", True)
         self.button("选择关卡", (299, 431, 136, 54), "levels")
         self.button("无尽模式   →", (76, 548, 208, 38), "endless")
-        p.text("随机关卡 · 三关解锁特别 CG", 300, 561, 12, MUTED)
+        p.text("随机关卡 · 三关解锁特殊 CG", 300, 561, 12, MUTED)
         if self.github_mark is not None:
             self.painter.canvas.blit(self.github_mark, (826 * 2, 544 * 2))
         else:
@@ -401,7 +401,7 @@ class Game:
         p.text(format_time(self.timer.elapsed_ms()), 81, 303, 28, ACCENT)
         if self.mode == 'endless':
             p.text('不限时 · 自由挑战', 82, 363, 13, MUTED)
-            p.text('特别 CG', 66, 435, 17, ACCENT)
+            p.text('特殊 CG', 66, 435, 17, ACCENT)
             p.text(f'本轮已通关 {self.endless_clears} 关', 66, 471, 13, MUTED)
             p.text('已解锁，继续挑战吧！' if self.endless_reward_shown else f'再通过 {max(0, 3-self.endless_clears)} 关解锁', 66, 503, 13, MUTED)
             p.text('每关恢复 3 次机会', 66, 547, 12, MUTED)
@@ -511,12 +511,12 @@ class Game:
         p.box((206, 170, 548, 460), PANEL, 26, LINE)
         p.text(f'第 {self.endless_round} 关，顺利通过！', 480, 217, 29, INK, center=True)
         p.text(f'本轮已通关 {self.endless_clears} 关', 480, 284, 25, ACCENT, center=True)
-        message = '特别 CG 已解锁，继续挑战更多关卡。' if self.endless_reward_shown else f'再通过 {3-self.endless_clears} 关，解锁特别 CG。'
+        message = '特殊 CG 已解锁，继续挑战更多关卡。' if self.endless_reward_shown else f'再通过 {3-self.endless_clears} 关，解锁特殊 CG。'
         p.text(message, 480, 339, 16, MUTED, center=True)
         p.text(f'本关用时 {format_time(self.timer.elapsed_ms())}   ·   剩余机会 {self.mistakes} / 3', 480, 396, 16, ACCENT, center=True)
         self.button('继续挑战   →', (241, 474, 478, 49), 'endless_next', True)
         if self.endless_reward_shown:
-            self.button('查看特别 CG', (241, 547, 231, 38), 'show_cg')
+            self.button('查看特殊 CG', (241, 547, 231, 38), 'show_cg')
             self.button('返回首页', (488, 547, 231, 38), 'home')
         else:
             self.button('返回首页', (241, 547, 478, 38), 'home')
