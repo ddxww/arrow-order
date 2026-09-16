@@ -371,6 +371,20 @@ class GameTests(unittest.TestCase):
         self.assertIsNone(game.animation)
         self.assertEqual(game.count_arrows(), LEVELS[0].arrows)
 
+    def test_auto_solve_can_start_after_hint_without_exiting(self):
+        game = self.game
+        game.reset_level(0)
+        game.render()
+        game.action('hint')
+        self.assertTrue(game.hint_active)
+        game.render()
+        self.assertIn((pygame.Rect(64, 693, 170, 38), 'auto_solve'), game.regions)
+        game.action('auto_solve')
+        self.assertEqual(game.scene, 'playing')
+        self.assertFalse(game.hint_active)
+        self.assertIsNotNone(game.animation)
+        self.assertEqual(game.hints, 2)
+
     def test_old_progress_keeps_unlocks_without_fabricating_times(self):
         old = {'unlocked': 4, 'best': {'0': {'mistakes': 0, 'hints': 1}}, 'sound': False}
         self.game.progress_file.write_text(json.dumps(old), encoding='utf-8')

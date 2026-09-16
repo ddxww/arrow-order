@@ -448,7 +448,7 @@ class Game:
         p.text(self.feedback, 480, 658, 14, self.feedback_color, center=True)
         auto_active = self.auto_solve_queue is not None
         self.button("自动求解中" if auto_active else "自动求解", (64, 693, 170, 38), "auto_solve",
-                    enabled=not auto_active and self.animation is None and not self.hint_active)
+                    enabled=not auto_active and self.animation is None)
         self.button(f"提示  {self.hints} / 3", (246, 693, 130, 38), "hint",
                     enabled=self.hints > 0 and self.animation is None and not self.hint_active and not auto_active)
         self.button("重新开始", (388, 693, 130, 38), "restart")
@@ -691,11 +691,12 @@ class Game:
             options = [(r, c) for r in range(len(self.board)) for c in range(len(self.board)) if self.board[r][c] != "." and can_exit(self.board, r, c)]
             if options:
                 self.hints -= 1; self.highlight = options[0]; self.hint_active = True; self.feedback, self.feedback_color = "金色箭头前方畅通，可以先点击它。", ORANGE
-        elif action == "auto_solve" and self.scene == "playing" and self.animation is None and self.auto_solve_queue is None and not self.hint_active:
+        elif action == "auto_solve" and self.scene == "playing" and self.animation is None and self.auto_solve_queue is None:
             order = self.current_level.solution
             if order:
                 self.auto_solve_queue = list(order)
                 self.highlight = None
+                self.hint_active = False
                 self.feedback, self.feedback_color = "自动求解已开始，正在按合法顺序清空棋盘。", ACCENT
                 self.advance_auto_solve()
             else:
