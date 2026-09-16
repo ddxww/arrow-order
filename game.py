@@ -183,7 +183,12 @@ class Game:
         self.painter = Painter()
         try:
             github_mark = pygame.image.load(str(Path(__file__).resolve().parent / 'assets' / 'images' / 'github_mark.png')).convert_alpha()
-            self.github_mark = pygame.transform.smoothscale(github_mark, (44, 44))
+            # The supplied mark is black, which disappears on the black HUD.
+            # Rebuild its alpha mask with the visible accent color.
+            self.github_mark = pygame.mask.from_surface(github_mark).to_surface(
+                setcolor=CYAN, unsetcolor=(0, 0, 0, 0)
+            )
+            self.github_mark = pygame.transform.smoothscale(self.github_mark, (44, 44))
         except (pygame.error, OSError):
             self.github_mark = None
         self.timer = LevelTimer()
@@ -225,6 +230,7 @@ class Game:
         self.regions = []
         self.progress_file = Path(data_dir) / "progress.json" if data_dir is not None else progress_path()
         self.storage_message = ""
+        self.achievement_open = False
         self.load_progress()
         self.sound.start_music()
 
@@ -252,7 +258,8 @@ class Game:
         try:
             self.progress_file.parent.mkdir(parents=True, exist_ok=True)
             temporary = self.progress_file.with_suffix(".tmp")
-            temporary.write_text(json.dumps({"unlocked": self.unlocked, "best": self.best, "sound": self.sound.enabled, "music": self.sound.music_enabled}, ensure_ascii=False, indent=2), encoding="utf-8")
+            temporary.write_text(json.dumps({"unlocked": self.unlocked, "best": self.best, "sound": self.sound.enabled, "music": self.sound.music_enabled,
+                                              "achievements": {"thumbs_up": self.achievement_unlocked}}, ensure_ascii=False, indent=2), encoding="utf-8")
             temporary.replace(self.progress_file)
         except OSError:
             self.storage_message = "进度暂未保存，本次游戏仍可继续。"
@@ -260,6 +267,11 @@ class Game:
     @property
     def current_level(self):
         return self.endless_level if self.mode == 'endless' else LEVELS[self.level_index]
+
+    @property
+    def achievement_unlocked(self):
+        """The thumbs-up achievement is earned by clearing every campaign level."""
+        return all(str(index) in self.best for index in range(len(LEVELS)))
 
     def start_endless(self):
         self.mode = 'endless'
@@ -342,6 +354,7 @@ class Game:
             self.painter.canvas.blit(self.github_mark, (826 * 2, 544 * 2))
         else:
             self.painter.github_icon((848, 566), 21)
+        p.text("查看项目", 775, 558, 11, CYAN)
         self.regions.append((pygame.Rect((752, 548, 144, 38)), "github"))
         p.pill("6 个关卡", (78, 509, 91, 28), size=12)
         p.pill("3 次机会", (181, 509, 91, 28), size=12)
@@ -470,6 +483,65 @@ class Game:
         self.button("重新开始", (388, 693, 130, 38), "restart")
         self.button("返回首页" if self.mode == 'endless' else "返回选关", (530, 693, 166, 38),
                     "home" if self.mode == 'endless' else "levels")
+        # Keep the trophy in the lower-right corner of the gameplay HUD.
+        trophy_rect = pygame.Rect(710, 693, 186, 38)
+        p.box(trophy_rect, PANEL, 14, LINE)
+        trophy_color = GOLD if self.achievement_unlocked else MUTED
+        self.draw_trophy_icon((731, 712), trophy_color, locked=not self.achievement_unlocked)
+        p.text("成就", 750, 703, 15, trophy_color)
+        self.regions.append((trophy_rect, "achievement"))
+
+    def draw_trophy_icon(self, center, color, locked=False):
+        """Draw a small trophy/lock glyph without relying on an emoji font."""
+        p = self.painter
+        cx, cy = center
+        if locked:
+            p.box((cx - 9, cy - 1, 18, 14), color, 3)
+            pygame.draw.arc(p.canvas, color, p.rect_scaled((cx - 6, cy - 10, 12, 15)), math.pi, 2 * math.pi, 3)
+            p.circle((cx, cy + 5), 1.5, PANEL)
+            return
+        p.box((cx - 7, cy - 10, 14, 13), color, 3)
+        p.line((cx, cy + 3), (cx, cy + 8), color, 3)
+        p.line((cx - 7, cy + 9), (cx + 7, cy + 9), color, 3)
+        pygame.draw.arc(p.canvas, color, p.rect_scaled((cx - 14, cy - 8, 9, 12)), math.pi / 2, math.pi * 1.5, 3)
+        pygame.draw.arc(p.canvas, color, p.rect_scaled((cx + 5, cy - 8, 9, 12)), -math.pi / 2, math.pi / 2, 3)
+
+    def draw_thumb_icon(self, center, color, scale=1.0):
+        """Draw the thumbs-up achievement glyph without relying on emoji fonts."""
+        cx, cy = center
+        s = scale
+        points = [(cx - 7*s, cy - 1*s), (cx - 2*s, cy - 1*s),
+                  (cx + 1*s, cy - 11*s), (cx + 5*s, cy - 13*s),
+                  (cx + 8*s, cy - 10*s), (cx + 5*s, cy - 2*s),
+                  (cx + 11*s, cy - 2*s), (cx + 12*s, cy + 2*s),
+                  (cx + 9*s, cy + 13*s), (cx - 7*s, cy + 13*s)]
+        pygame.draw.polygon(self.painter.canvas, color,
+                            [(round(x * 2), round(y * 2)) for x, y in points])
+        self.painter.box((cx - 11*s, cy - 1*s, 5*s, 14*s), color, radius=2)
+
+    def draw_achievement_panel(self):
+        p = self.painter
+        self.regions.clear()
+        shade = pygame.Surface(p.canvas.get_size(), pygame.SRCALPHA)
+        shade.fill((0, 0, 0, 150))
+        p.canvas.blit(shade, (0, 0))
+        p.box((220, 178, 520, 404), PANEL, 24, LINE)
+        p.text("成就", 480, 211, 30, INK, center=True)
+        p.text("通关记录", 480, 258, 14, MUTED, center=True)
+        color = GOLD if self.achievement_unlocked else MUTED
+        p.circle((480, 350), 58, PALE)
+        self.draw_trophy_icon((480, 347), color, locked=not self.achievement_unlocked)
+        if self.achievement_unlocked:
+            self.draw_thumb_icon((480, 436), GOLD, 1.35)
+            p.text("全部关卡完成", 480, 466, 19, INK, center=True)
+            p.text("成就已解锁", 480, 499, 14, CYAN, center=True)
+        else:
+            completed = sum(str(index) in self.best for index in range(len(LEVELS)))
+            self.draw_trophy_icon((480, 427), MUTED, locked=True)
+            self.draw_thumb_icon((480, 470), MUTED, 0.9)
+            p.text(f"完成全部 {len(LEVELS)} 个关卡后解锁", 480, 498, 14, MUTED, center=True)
+            p.text(f"当前进度 {completed} / {len(LEVELS)}", 480, 523, 13, ACCENT, center=True)
+        self.button("关闭", (415, 546, 130, 38), "achievement_close")
 
     def draw_stars(self, count, center_x, center_y, radius=23, spacing=76):
         for index in range(3):
@@ -656,6 +728,8 @@ class Game:
         elif self.scene == "fail_intro": self.draw_fail_intro()
         elif self.scene == 'endless_cg': self.draw_endless_cg()
         else: self.draw_result()
+        if self.achievement_open:
+            self.draw_achievement_panel()
         self.danger_effect.draw(self.painter.canvas, self.sound.heartbeat_started)
         return pygame.transform.smoothscale(self.painter.canvas, SIZE)
 
@@ -668,6 +742,12 @@ class Game:
 
     def click(self, point):
         if self.scene in ("fail_intro", "last_chance"): return
+        if self.achievement_open:
+            for rect, action in reversed(self.regions):
+                if rect.collidepoint(point):
+                    self.action(action)
+                    return
+            return
         for rect, action in reversed(self.regions):
             if rect.collidepoint(point):
                 self.action(action); return
@@ -690,7 +770,9 @@ class Game:
     def action(self, action):
         if self.scene in ("fail_intro", "last_chance"): return
         self.sound.play("click")
-        if action == "sound": self.sound.toggle(); self.save_progress()
+        if action == "achievement": self.achievement_open = True
+        elif action == "achievement_close": self.achievement_open = False
+        elif action == "sound": self.sound.toggle(); self.save_progress()
         elif action == "music": self.sound.toggle_music(); self.save_progress()
         elif action == "start": self.reset_level(next((i for i in range(len(LEVELS)) if str(i) not in self.best), 0))
         elif action == 'endless': self.start_endless()
