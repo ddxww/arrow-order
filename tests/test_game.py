@@ -385,6 +385,21 @@ class GameTests(unittest.TestCase):
         self.assertIsNotNone(game.animation)
         self.assertEqual(game.hints, 2)
 
+    def test_auto_solve_recomputes_after_hint_arrow_was_removed(self):
+        game = self.game
+        game.reset_level(0)
+        game.action('hint')
+        hinted = game.highlight
+        self.assertIsNotNone(hinted)
+        game.select_arrow(*hinted)
+        game.animation['start'] -= 1
+        game.update()
+        self.assertEqual(game.board[hinted[0]][hinted[1]], '.')
+        game.action('auto_solve')
+        self.assertEqual(game.scene, 'playing')
+        self.assertIsNotNone(game.animation)
+        self.assertIsNotNone(game.auto_solve_queue)
+
     def test_old_progress_keeps_unlocks_without_fabricating_times(self):
         old = {'unlocked': 4, 'best': {'0': {'mistakes': 0, 'hints': 1}}, 'sound': False}
         self.game.progress_file.write_text(json.dumps(old), encoding='utf-8')

@@ -20,7 +20,7 @@ import pygame
 from arrowgame.levels import LEVELS
 from arrowgame.effects import DangerVignette, HEARTBEAT_PERIOD, HEARTBEAT_PULSES
 from arrowgame.preview_ui import Painter, BG, PANEL, INK, MUTED, ACCENT, PALE, LINE, WHITE, ORANGE, RED, DIRECTION_COLORS
-from arrowgame.rules import can_exit, first_blocker
+from arrowgame.rules import can_exit, first_blocker, solve_order
 from arrowgame.scoring import LevelTimer, award_stars, better_record, clean_record, format_time
 from arrowgame.endless import generate_level
 from arrowgame.cg import AnimatedSticker, load_image
@@ -692,7 +692,9 @@ class Game:
             if options:
                 self.hints -= 1; self.highlight = options[0]; self.hint_active = True; self.feedback, self.feedback_color = "金色箭头前方畅通，可以先点击它。", ORANGE
         elif action == "auto_solve" and self.scene == "playing" and self.animation is None and self.auto_solve_queue is None:
-            order = self.current_level.solution
+            # Solve the board as it is now. The player may have followed a
+            # hint and removed an arrow before starting the auto solver.
+            order = solve_order(self.board)
             if order:
                 self.auto_solve_queue = list(order)
                 self.highlight = None
@@ -771,6 +773,15 @@ class Game:
         """Start the next solver-selected move after the previous animation ends."""
         if self.scene != "playing" or self.animation is not None or self.auto_solve_queue is None:
             return
+        while self.auto_solve_queue and self.board[self.auto_solve_queue[0][0]][self.auto_solve_queue[0][1]] == ".":
+            self.auto_solve_queue.pop(0)
+        if self.auto_solve_queue:
+            row, col = self.auto_solve_queue[0]
+            if not can_exit(self.board, row, col):
+                # A stale queue can only happen after an external board move;
+                # recover from the current board instead of raising.
+                order = solve_order(self.board)
+                self.auto_solve_queue = list(order) if order else None
         if not self.auto_solve_queue:
             self.auto_solve_queue = None
             return
