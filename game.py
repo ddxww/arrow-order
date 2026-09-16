@@ -211,6 +211,7 @@ class Game:
         self.mistakes = 3
         self.hints = 3
         self.animation = None
+        self.auto_solve_queue = None
         self.feedback = "选择一支箭头，让它沿方向飞出去。"
         self.feedback_color = MUTED
         self.hover = None
@@ -277,6 +278,7 @@ class Game:
         self.board = [list(row) for row in level.rows]
         self.mistakes, self.hints = 3, 3
         self.animation, self.highlight, self.hover = None, None, None
+        self.auto_solve_queue = None
         self.fail_intro_started = None
         self.last_chance_started = None
         self.hint_active = False
@@ -444,9 +446,14 @@ class Game:
             cy = y + a["row"] * cell + cell / 2 + dr * progress * distance
             p.arrow((cx, cy), a["direction"], cell * .39, DIRECTION_COLORS.get(a["direction"], ACCENT), 4)
         p.text(self.feedback, 480, 658, 14, self.feedback_color, center=True)
-        self.button(f"提示  {self.hints} / 3", (264, 693, 146, 38), "hint", enabled=self.hints > 0 and self.animation is None and not self.hint_active)
-        self.button("重新开始", (421, 693, 146, 38), "restart")
-        self.button("返回首页" if self.mode == 'endless' else "返回选关", (578, 693, 118, 38), "home" if self.mode == 'endless' else "levels")
+        auto_active = self.auto_solve_queue is not None
+        self.button("自动求解中" if auto_active else "自动求解", (64, 693, 170, 38), "auto_solve",
+                    enabled=not auto_active and self.animation is None and not self.hint_active)
+        self.button(f"提示  {self.hints} / 3", (246, 693, 130, 38), "hint",
+                    enabled=self.hints > 0 and self.animation is None and not self.hint_active and not auto_active)
+        self.button("重新开始", (388, 693, 130, 38), "restart")
+        self.button("返回首页" if self.mode == 'endless' else "返回选关", (530, 693, 166, 38),
+                    "home" if self.mode == 'endless' else "levels")
 
     def draw_stars(self, count, center_x, center_y, radius=23, spacing=76):
         for index in range(3):
@@ -648,7 +655,7 @@ class Game:
         for rect, action in reversed(self.regions):
             if rect.collidepoint(point):
                 self.action(action); return
-        if self.scene == "playing" and self.animation is None:
+        if self.scene == "playing" and self.animation is None and self.auto_solve_queue is None:
             cell = self.board_cell(point)
             if cell and self.board[cell[0]][cell[1]] != ".": self.select_arrow(*cell)
 
@@ -677,13 +684,22 @@ class Game:
         elif action == 'show_cg' and self.mode == 'endless' and self.endless_reward_shown and self.scene == 'endless_win':
             self.cg_started = time.monotonic()
             self.scene = 'endless_cg'
-        elif action == "levels": self.scene, self.animation = "levels", None
-        elif action == "home": self.scene, self.animation = "home", None
+        elif action == "levels": self.scene, self.animation, self.auto_solve_queue = "levels", None, None
+        elif action == "home": self.scene, self.animation, self.auto_solve_queue = "home", None, None
         elif action == "restart": self.reset_level()
         elif action == "hint" and self.hints > 0 and self.animation is None and not self.hint_active:
             options = [(r, c) for r in range(len(self.board)) for c in range(len(self.board)) if self.board[r][c] != "." and can_exit(self.board, r, c)]
             if options:
                 self.hints -= 1; self.highlight = options[0]; self.hint_active = True; self.feedback, self.feedback_color = "金色箭头前方畅通，可以先点击它。", ORANGE
+        elif action == "auto_solve" and self.scene == "playing" and self.animation is None and self.auto_solve_queue is None and not self.hint_active:
+            order = self.current_level.solution
+            if order:
+                self.auto_solve_queue = list(order)
+                self.highlight = None
+                self.feedback, self.feedback_color = "自动求解已开始，正在按合法顺序清空棋盘。", ACCENT
+                self.advance_auto_solve()
+            else:
+                self.feedback, self.feedback_color = "当前棋盘没有可用的完整解序。", RED
         elif action == "next": self.reset_level(self.level_index + 1)
         elif action == "first": self.reset_level(0)
         elif isinstance(action, tuple) and action[0] == "level": self.reset_level(action[1])
@@ -712,6 +728,7 @@ class Game:
         if a["kind"] == "fly":
             self.board[a["row"]][a["col"]] = "."; self.sound.play("fly"); self.highlight = None; self.hint_active = False
             if self.count_arrows() == 0:
+                self.auto_solve_queue = None
                 self.timer.pause()
                 elapsed_ms = self.timer.elapsed_ms()
                 if self.mode == 'endless':
@@ -737,13 +754,27 @@ class Game:
                 if better_record(record, old): self.best[str(self.level_index)] = record
                 self.unlocked = min(len(LEVELS), max(self.unlocked, self.level_index + 2)); self.save_progress(); self.sound.play("win")
                 self.scene = "complete" if self.level_index == len(LEVELS) - 1 else "win"
-            else: self.feedback = "很好，继续观察下一支畅通的箭头。"
+            else:
+                self.feedback = "自动求解中……" if self.auto_solve_queue is not None else "很好，继续观察下一支畅通的箭头。"
+                self.advance_auto_solve()
         elif self.mistakes <= 0:
+            self.auto_solve_queue = None
             self.scene = "fail_intro" if self.fail_overlay is not None else "fail"
             self.fail_intro_started = time.monotonic() if self.fail_overlay is not None else None
         elif self.mistakes == 1 and self.last_chance_overlay is not None:
+            self.auto_solve_queue = None
             self.scene = "last_chance"
             self.last_chance_started = time.monotonic()
+
+    def advance_auto_solve(self):
+        """Start the next solver-selected move after the previous animation ends."""
+        if self.scene != "playing" or self.animation is not None or self.auto_solve_queue is None:
+            return
+        if not self.auto_solve_queue:
+            self.auto_solve_queue = None
+            return
+        row, col = self.auto_solve_queue.pop(0)
+        self.select_arrow(row, col)
 
     def run(self):
         clock = pygame.time.Clock(); running = True

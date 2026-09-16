@@ -339,6 +339,38 @@ class GameTests(unittest.TestCase):
             self.assertEqual(game.result_stars, 0)
             self.assertEqual(game.timer.elapsed_ms(), 0)
 
+    def test_auto_solve_plays_current_level_without_player_mistakes(self):
+        game = self.game
+        game.reset_level(0)
+        game.action('auto_solve')
+        self.assertIsNotNone(game.auto_solve_queue)
+        self.assertIsNotNone(game.animation)
+
+        for _ in range(LEVELS[0].arrows):
+            self.assertIsNotNone(game.animation)
+            game.animation['start'] -= 1
+            game.update()
+
+        self.assertEqual(game.scene, 'win')
+        self.assertIsNone(game.animation)
+        self.assertIsNone(game.auto_solve_queue)
+        self.assertEqual(game.mistakes, 3)
+        self.assertEqual(game.hints, 3)
+
+    def test_auto_solve_blocks_board_clicks_but_restart_remains_available(self):
+        game = self.game
+        game.reset_level(0)
+        game.render()
+        game.action('auto_solve')
+        remaining = game.count_arrows()
+        game.click((480, 435))
+        self.assertEqual(game.count_arrows(), remaining)
+        self.assertEqual(game.mistakes, 3)
+        game.action('restart')
+        self.assertIsNone(game.auto_solve_queue)
+        self.assertIsNone(game.animation)
+        self.assertEqual(game.count_arrows(), LEVELS[0].arrows)
+
     def test_old_progress_keeps_unlocks_without_fabricating_times(self):
         old = {'unlocked': 4, 'best': {'0': {'mistakes': 0, 'hints': 1}}, 'sound': False}
         self.game.progress_file.write_text(json.dumps(old), encoding='utf-8')
