@@ -12,7 +12,7 @@ import unittest
 from unittest.mock import patch
 
 import pygame
-from game import Game, SoundKit, INTRO_DURATION
+from game import COLLISION_DURATION, FLY_DURATION, Game, SoundKit, INTRO_DURATION
 from arrowgame.levels import LEVELS
 
 
@@ -399,6 +399,18 @@ class GameTests(unittest.TestCase):
         self.assertEqual(game.scene, 'playing')
         self.assertIsNotNone(game.animation)
         self.assertIsNotNone(game.auto_solve_queue)
+
+    def test_action_feedback_is_short_enough_for_rapid_input(self):
+        game = self.game
+        game.reset_level(0)
+        game.select_arrow(0, 0)
+        self.assertEqual(game.animation['duration'], FLY_DURATION)
+        self.assertLessEqual(FLY_DURATION, .20)
+        game.animation = None
+        game.mistakes = 3
+        game.select_arrow(2, 2)
+        self.assertEqual(game.animation['duration'], COLLISION_DURATION)
+        self.assertLessEqual(COLLISION_DURATION, .16)
 
     def test_old_progress_keeps_unlocks_without_fabricating_times(self):
         old = {'unlocked': 4, 'best': {'0': {'mistakes': 0, 'hints': 1}}, 'sound': False}

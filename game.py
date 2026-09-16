@@ -27,6 +27,9 @@ from arrowgame.cg import AnimatedSticker, load_image
 
 SIZE = (960, 800)
 FPS = 60
+# Keep feedback visible while making rapid, deliberate moves feel responsive.
+FLY_DURATION = .18
+COLLISION_DURATION = .14
 INTRO_FADE_IN = .6
 INTRO_HOLD = 1.0
 INTRO_FADE_OUT = .7
@@ -676,11 +679,11 @@ class Game:
         if self.scene != "playing" or self.animation is not None: return
         if can_exit(self.board, row, col):
             self.sound.play("click"); direction = self.board[row][col]
-            self.animation = {"kind":"fly", "row":row, "col":col, "direction":direction, "start":time.monotonic(), "duration":.32}
+            self.animation = {"kind":"fly", "row":row, "col":col, "direction":direction, "start":time.monotonic(), "duration":FLY_DURATION}
             self.feedback, self.feedback_color = "飞出棋盘……", ACCENT
         else:
             self.sound.play("hit"); self.mistakes -= 1
-            self.animation = {"kind":"collision", "row":row, "col":col, "blocker":first_blocker(self.board,row,col), "start":time.monotonic(), "duration":.26}
+            self.animation = {"kind":"collision", "row":row, "col":col, "blocker":first_blocker(self.board,row,col), "start":time.monotonic(), "duration":COLLISION_DURATION}
             self.highlight = (row, col); self.feedback, self.feedback_color = "前方有箭头挡住了，先解除阻挡吧。", RED
         self.sync_game_audio()
 
