@@ -19,7 +19,7 @@ import pygame
 
 from arrowgame.levels import LEVELS
 from arrowgame.effects import DangerVignette, HEARTBEAT_PERIOD, HEARTBEAT_PULSES
-from arrowgame.preview_ui import Painter, BG, PANEL, INK, MUTED, ACCENT, PALE, LINE, WHITE, ORANGE, RED, DIRECTION_COLORS
+from arrowgame.preview_ui import Painter, BG, PANEL, INK, MUTED, ACCENT, CYAN, GOLD, PALE, LINE, WHITE, ORANGE, RED, DIRECTION_COLORS
 from arrowgame.rules import can_exit, first_blocker, solve_order
 from arrowgame.scoring import LevelTimer, award_stars, better_record, clean_record, format_time
 from arrowgame.endless import generate_level
@@ -324,11 +324,13 @@ class Game:
 
     def draw_home(self):
         p = self.painter
+        p.pill("PUZZLE SYSTEM  /  READY", (76, 112, 184, 27), "#101A1D", CYAN, 11)
         p.text("A LITTLE ORDER. A LITTLE JOY.", 76, 153, 12, ACCENT)
         p.text("一箭又一箭", 72, 195, 57)
         p.text("让每一箭，找到自己的出口。", 77, 290, 22, ACCENT)
         p.text("沿着方向，解开阻挡。", 78, 343, 17, MUTED)
         p.text("六段小小挑战，留一点时间给思考。", 78, 375, 17, MUTED)
+        p.glow((76, 431, 208, 54), ACCENT, 14, 28, 5)
         self.button("开始游戏   →", (76, 431, 208, 54), "start", True)
         self.button("选择关卡", (299, 431, 136, 54), "levels")
         self.button("无尽模式   →", (76, 548, 208, 38), "endless")
@@ -342,6 +344,8 @@ class Game:
         p.pill("3 次机会", (181, 509, 91, 28), size=12)
         p.pill("3 次提示", (284, 509, 91, 28), size=12)
         p.board(552, 192, 59, highlight=(0, 1))
+        p.text("LIVE BOARD", 552, 173, 10, CYAN)
+        p.text("5 × 5  /  15 ARROWS", 689, 173, 10, MUTED)
         p.pill("从一支畅通的箭头开始", (581, 520, 231, 34), "#382B18", ORANGE)
         cards = (("01", "观察方向", "箭头只能沿自身方向飞出。"), ("02", "解除阻挡", "先送走挡在前面的箭头。"), ("03", "清空棋盘", "用三次机会，找到通关顺序。"))
         for i, (num, title, body) in enumerate(cards):
@@ -355,6 +359,7 @@ class Game:
 
     def draw_levels(self):
         p = self.painter
+        p.pill("MISSION SELECT", (64, 94, 142, 27), "#101A1D", CYAN, 11)
         p.text("一点点，解开所有方向。", 64, 127, 34)
         p.text("六个关卡 · 循序渐进 · 已通关的关卡可以随时重玩", 65, 186, 15, MUTED)
         for i, level in enumerate(LEVELS):
@@ -366,6 +371,9 @@ class Game:
             p.pill("已完成" if completed else "可挑战" if unlocked else "待解锁", (x + 164, y + 24, 80, 28), PALE, ACCENT if unlocked else MUTED, 12)
             p.text(level.name, x + 23, y + 80, 22, INK if unlocked else MUTED)
             p.text(f"{level.difficulty}   ·   {len(level.rows)} × {len(level.rows)}", x + 24, y + 118, 13, MUTED)
+            difficulty = min(5, 2 + i // 2)
+            for dot in range(5):
+                p.circle((x + 25 + dot * 13, y + 145), 3, GOLD if dot < difficulty else "#343139")
             record = self.best.get(str(i))
             if record and 'stars' in record:
                 self.draw_stars(record['stars'], x+56, y+163, 9, 24)
@@ -399,6 +407,7 @@ class Game:
             p.circle((754 + i * 26, 166), 8, "#45414A" if i >= self.mistakes else "#A99AE8")
         p.text(f"{self.mistakes} / 3", 833, 159, 13, MUTED)
         p.box((64, 253, 180, 148), PANEL, 16, LINE)
+        p.text("RUN TELEMETRY", 82, 263, 9, CYAN)
         p.text("本关用时", 82, 273, 13, MUTED)
         p.text(format_time(self.timer.elapsed_ms()), 81, 303, 28, ACCENT)
         if self.mode == 'endless':
@@ -420,6 +429,10 @@ class Game:
         if self.animation and self.animation["kind"] == "fly":
             rows[self.animation["row"]][self.animation["col"]] = "."
         p.board(x, y, cell, rows=rows, highlight=None)
+        p.text("BOARD  /  ACTIVE GRID", x, 225, 10, CYAN)
+        remaining = self.count_arrows()
+        total = max(1, self.current_level.arrows)
+        p.progress_bar((562, 199, 334, 7), remaining / total, CYAN)
         highlight_color = ORANGE if self.hint_active else DIRECTION_COLORS.get(self.board[highlight[0]][highlight[1]], ACCENT) if highlight else ACCENT
         for position, color in ((highlight, highlight_color),):
             if position and self.board[position[0]][position[1]] != "." and not self.animation:
@@ -632,7 +645,7 @@ class Game:
         self.button("新一轮无尽" if self.mode == 'endless' else "返回选关", (487, 557, 186, 34), "endless" if self.mode == 'endless' else "levels")
 
     def render(self):
-        self.painter.canvas.fill(BG); self.painter.buttons.clear(); self.painter.text_bounds.clear(); self.regions.clear(); self.draw_header_footer()
+        self.painter.canvas.fill(BG); self.painter.background(); self.painter.buttons.clear(); self.painter.text_bounds.clear(); self.regions.clear(); self.draw_header_footer()
         if self.scene == "home": self.draw_home()
         elif self.scene == "levels": self.draw_levels()
         elif self.scene == "playing": self.draw_playing()

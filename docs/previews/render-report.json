@@ -4,7 +4,7 @@
       960,
       800
     ],
-    "text_runs": 26,
+    "text_runs": 29,
     "text_overflow": []
   },
   "levels": {
@@ -12,7 +12,7 @@
       960,
       800
     ],
-    "text_runs": 40,
+    "text_runs": 41,
     "text_overflow": []
   },
   "game": {
@@ -20,7 +20,7 @@
       960,
       800
     ],
-    "text_runs": 23,
+    "text_runs": 25,
     "text_overflow": []
   },
   "hint": {
@@ -28,7 +28,7 @@
       960,
       800
     ],
-    "text_runs": 23,
+    "text_runs": 25,
     "text_overflow": []
   },
   "collision": {
@@ -36,7 +36,7 @@
       960,
       800
     ],
-    "text_runs": 23,
+    "text_runs": 25,
     "text_overflow": []
   },
   "win": {
@@ -44,7 +44,7 @@
       960,
       800
     ],
-    "text_runs": 30,
+    "text_runs": 32,
     "text_overflow": []
   },
   "fail": {
@@ -52,7 +52,7 @@
       960,
       800
     ],
-    "text_runs": 31,
+    "text_runs": 33,
     "text_overflow": []
   },
   "complete": {
@@ -60,7 +60,7 @@
       960,
       800
     ],
-    "text_runs": 30,
+    "text_runs": 32,
     "text_overflow": []
   }
 }

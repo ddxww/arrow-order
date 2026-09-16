@@ -17,6 +17,9 @@ PANEL = "#17161B"
 INK = "#F5F4F7"
 MUTED = "#B7B3C2"
 ACCENT = "#A99AE8"
+CYAN = "#65D6D0"
+GOLD = "#F3C969"
+PINK = "#EF719D"
 PALE = "#24202E"
 LINE = "#403A49"
 WHITE = "#FFFFFF"
@@ -56,6 +59,35 @@ class Painter:
         pygame.draw.rect(self.canvas, fill, r, border_radius=radius * 2)
         if border:
             pygame.draw.rect(self.canvas, border, r, width * 2, border_radius=radius * 2)
+
+    def glow(self, rect, color=ACCENT, radius=16, alpha=24, spread=8):
+        """Add a quiet halo behind an important panel without changing its hitbox."""
+        x, y, w, h = rect
+        layer = pygame.Surface(self.canvas.get_size(), pygame.SRCALPHA)
+        glow_color = pygame.Color(color)
+        glow_color.a = alpha
+        pygame.draw.rect(layer, glow_color, self.rect_scaled((x-spread, y-spread, w+spread*2, h+spread*2)), border_radius=(radius+spread)*2)
+        self.canvas.blit(layer, (0, 0))
+
+    def background(self):
+        """Subtle HUD grid keeps the black theme dimensional and calm."""
+        for x in range(40, 921, 48):
+            self.line((x, 76), (x, 726), "#0D1117")
+        for y in range(92, 727, 48):
+            self.line((40, y), (920, y), "#0D1117")
+        for x, y, dx, dy in ((40, 76, 18, 0), (40, 76, 0, 18), (920, 726, -18, 0), (920, 726, 0, -18)):
+            self.line((x, y), (x + dx, y + dy), CYAN, 1)
+
+    def progress_bar(self, rect, value, color=CYAN, track=PALE):
+        x, y, w, h = rect
+        self.box(rect, track, radius=h // 2)
+        if value > 0:
+            self.box((x, y, max(h, w * max(0.0, min(1.0, value))), h), color, radius=h // 2)
+
+    def stat_chip(self, label, value, rect, color=ACCENT):
+        self.box(rect, PANEL, 12, LINE)
+        self.text(label.upper(), rect[0] + 12, rect[1] + 9, 9, MUTED)
+        self.text(value, rect[0] + 12, rect[1] + 24, 17, color)
 
     def line(self, a, b, color=LINE, width=1):
         pygame.draw.line(self.canvas, color, (a[0] * 2, a[1] * 2), (b[0] * 2, b[1] * 2), width * 2)
@@ -121,12 +153,13 @@ class Painter:
             self.buttons.append(Button(label, pygame.Rect(rect), target))
 
     def header(self):
+        self.glow((40, 28, 34, 34), ACCENT, 11, 35, 5)
         self.box((40, 28, 34, 34), ACCENT, 11)
         self.arrow((57, 45), "R", 18, WHITE, 2)
         self.text("箭序", 86, 31, 24)
         self.line((148, 36), (148, 56))
         self.text("一箭又一箭", 164, 39, 14, MUTED)
-        self.pill("本地 · 离线", (614, 29, 102, 32))
+        self.pill("●  本地 · 离线", (600, 29, 116, 32), PALE, CYAN)
         self.button("音效 开", (831, 27, 89, 36), "mute")
 
     def footer(self):
@@ -138,6 +171,7 @@ class Painter:
         n = len(rows)
         pad = 18
         extent = cell * n
+        self.glow((x - pad, y - pad, extent + pad * 2, extent + pad * 2), CYAN, 24, 16, 7)
         self.box((x - pad + 2, y - pad + 7, extent + pad * 2, extent + pad * 2), "#0B0A0D", 24)
         self.box((x - pad, y - pad, extent + pad * 2, extent + pad * 2), PANEL, 24, LINE)
         for row, values in enumerate(rows):
@@ -157,17 +191,21 @@ class Painter:
                     self.circle((tx + cell / 2, ty + cell / 2), 2, "#5A5367")
 
     def home(self):
+        self.pill("PUZZLE SYSTEM  /  READY", (76, 112, 184, 27), "#101A1D", CYAN, 11)
         self.text("A LITTLE ORDER. A LITTLE JOY.", 76, 153, 12, ACCENT)
         self.text("一箭又一箭", 72, 195, 57)
         self.text("让每一箭，找到自己的出口。", 77, 290, 22, ACCENT)
         self.text("沿着方向，解开阻挡。", 78, 343, 17, MUTED)
         self.text("六段小小挑战，留一点时间给思考。", 78, 375, 17, MUTED)
+        self.glow((76, 431, 208, 54), ACCENT, 14, 28, 5)
         self.button("开始游戏   →", (76, 431, 208, 54), "game", True)
         self.button("选择关卡", (299, 431, 136, 54), "levels")
         self.pill("6 个关卡", (78, 509, 91, 28), size=12)
         self.pill("3 次机会", (181, 509, 91, 28), size=12)
         self.pill("一点提示", (284, 509, 91, 28), size=12)
         self.board(552, 192, 59, highlight=(0, 1))
+        self.text("LIVE BOARD", 552, 173, 10, CYAN)
+        self.text("5 × 5  /  15 ARROWS", 689, 173, 10, MUTED)
         self.pill("从一支畅通的箭头开始", (581, 520, 231, 34), "#382B18", ORANGE)
         cards = (("01", "观察方向", "箭头只能沿自身方向飞出。"), ("02", "解除阻挡", "先送走挡在前面的箭头。"), ("03", "清空棋盘", "用三次机会，找到通关顺序。"))
         for i, (num, title, body) in enumerate(cards):
@@ -186,16 +224,18 @@ class Painter:
         self.text("最后之序" if variant == "complete" else "初识箭序", 63, 143, 33)
         self.text("看清方向，先从畅通的箭头开始。", 65, 194, 15, MUTED)
         self.box((562, 110, 149, 83), PANEL, 16, LINE)
-        self.text("剩余箭头", 580, 124, 12, MUTED)
+        self.text("BOARD LOAD", 580, 120, 9, CYAN)
         self.text(str(sum(ch != "." for row in rows for ch in row)), 580, 150, 26)
         self.text("支", 623, 161, 12, MUTED)
         self.box((726, 110, 170, 83), PANEL, 16, LINE)
-        self.text("剩余机会", 744, 124, 12, MUTED)
+        self.text("RUN STATUS", 744, 120, 9, CYAN)
+        self.text("剩余机会", 744, 137, 12, MUTED)
         for i in range(3):
             self.circle((754 + i * 26, 166), 8, "#45414A" if i >= mistakes else "#A99AE8")
         self.text(f"{mistakes} / 3", 833, 159, 13, MUTED)
         highlight = (0, 3) if variant == "collision" else (0, 1) if variant == "hint" else None
         self.board(300, 257, 360 / len(rows), rows=rows, highlight=highlight, collision=variant == "collision")
+        self.text("BOARD  /  ACTIVE GRID", 300, 225, 10, CYAN)
         self.text("先看边缘", 65, 333, 18, ACCENT)
         self.line((65, 369), (176, 369))
         self.text("朝向棋盘外的箭头，", 65, 390, 13, MUTED)
@@ -216,6 +256,7 @@ class Painter:
         self.button("返回选关", (578, 693, 118, 38), "levels")
 
     def levels(self):
+        self.pill("MISSION SELECT", (64, 94, 142, 27), "#101A1D", CYAN, 11)
         self.text("一点点，解开所有方向。", 64, 127, 34)
         self.text("六个关卡 · 循序渐进 · 已通关的关卡可以随时重玩", 65, 186, 15, MUTED)
         names = ("初识箭序", "留意空隙", "交错之间", "逐一解锁", "四向交织", "最后之序")
@@ -227,6 +268,9 @@ class Painter:
             self.pill("已完成" if i == 0 else "可挑战" if i == 1 else "待解锁", (x + 164, y + 24, 80, 28), PALE, ACCENT if unlocked else MUTED, 12)
             self.text(name, x + 23, y + 80, 22, INK if unlocked else MUTED)
             self.text(f"{('入门', '进阶', '挑战')[i // 2]}   ·   {5 + i // 2} × {5 + i // 2}", x + 24, y + 118, 13, MUTED)
+            difficulty = min(5, 2 + i // 2)
+            for dot in range(5):
+                self.circle((x + 25 + dot * 13, y + 145), 3, GOLD if dot < difficulty else "#343139")
             self.text("最佳：0 失误 · 1 提示" if i == 0 else "准备好了吗？" if i == 1 else f"完成第 {i} 关后解锁", x + 24, y + 151, 12, ACCENT if unlocked else MUTED)
             if unlocked:
                 self.buttons.append(Button(name, pygame.Rect(x, y, 266, 187), "game"))
@@ -266,6 +310,7 @@ class Painter:
         if scene not in SCENES:
             raise ValueError(f"Unknown scene: {scene}")
         self.canvas.fill(BG)
+        self.background()
         self.buttons.clear()
         self.text_bounds.clear()
         self.header()
