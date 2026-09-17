@@ -371,6 +371,27 @@ class GameTests(unittest.TestCase):
         self.assertIsNone(game.animation)
         self.assertEqual(game.count_arrows(), LEVELS[0].arrows)
 
+    def test_auto_solve_button_stops_after_current_arrow(self):
+        game = self.game
+        game.reset_level(0)
+        total = game.count_arrows()
+        game.action('auto_solve')
+        game.render()
+        self.assertTrue(any(button.name == '停止自动求解' for button in game.painter.buttons))
+
+        game.action('auto_solve')
+        self.assertIsNone(game.auto_solve_queue)
+        self.assertIsNotNone(game.animation)
+        self.assertIn('已停止', game.feedback)
+
+        game.animation['start'] -= 1
+        game.update()
+        self.assertEqual(game.scene, 'playing')
+        self.assertEqual(game.count_arrows(), total - 1)
+        self.assertIsNone(game.animation)
+        game.render()
+        self.assertTrue(any(button.name == '自动求解' for button in game.painter.buttons))
+
     def test_auto_solve_can_start_after_hint_without_exiting(self):
         game = self.game
         game.reset_level(0)

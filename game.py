@@ -336,6 +336,15 @@ class Game:
         self.button("音乐 开" if self.sound.music_enabled else "音乐 关", (731, 27, 89, 36), "music")
         self.painter.box((831, 27, 89, 36), BG, 12)
         self.button("音效 开" if self.sound.enabled else "音效 关", (831, 27, 89, 36), "sound")
+        # A persistent lower-right entry keeps achievements discoverable from
+        # the home, level-select, and gameplay screens.
+        trophy_rect = pygame.Rect(808, 750, 112, 34)
+        self.painter.box((715, 748, 205, 39), BG, 0)
+        self.painter.box(trophy_rect, PANEL, 11, LINE)
+        trophy_color = GOLD if self.achievement_unlocked else MUTED
+        self.draw_trophy_icon((827, 767), trophy_color, locked=not self.achievement_unlocked)
+        self.painter.text("成就", 845, 758, 14, trophy_color)
+        self.regions.append((trophy_rect, "achievement"))
 
     def draw_home(self):
         p = self.painter
@@ -476,21 +485,13 @@ class Game:
             p.arrow((cx, cy), a["direction"], cell * .39, DIRECTION_COLORS.get(a["direction"], ACCENT), 4)
         p.text(self.feedback, 480, 658, 14, self.feedback_color, center=True)
         auto_active = self.auto_solve_queue is not None
-        self.button("自动求解中" if auto_active else "自动求解", (64, 693, 170, 38), "auto_solve",
-                    enabled=not auto_active and self.animation is None)
+        self.button("停止自动求解" if auto_active else "自动求解", (64, 693, 170, 38), "auto_solve",
+                    enabled=auto_active or self.animation is None)
         self.button(f"提示  {self.hints} / 3", (246, 693, 130, 38), "hint",
                     enabled=self.hints > 0 and self.animation is None and not self.hint_active and not auto_active)
         self.button("重新开始", (388, 693, 130, 38), "restart")
         self.button("返回首页" if self.mode == 'endless' else "返回选关", (530, 693, 166, 38),
                     "home" if self.mode == 'endless' else "levels")
-        # Keep the trophy in the lower-right corner of the gameplay HUD.
-        trophy_rect = pygame.Rect(710, 693, 186, 38)
-        p.box(trophy_rect, PANEL, 14, LINE)
-        trophy_color = GOLD if self.achievement_unlocked else MUTED
-        self.draw_trophy_icon((731, 712), trophy_color, locked=not self.achievement_unlocked)
-        p.text("成就", 750, 703, 15, trophy_color)
-        self.regions.append((trophy_rect, "achievement"))
-
     def draw_trophy_icon(self, center, color, locked=False):
         """Draw a small trophy/lock glyph without relying on an emoji font."""
         p = self.painter
@@ -701,6 +702,7 @@ class Game:
         # Draw a dimmed board background, then lock all board input behind modal.
         self.draw_playing()
         self.regions.clear()
+        self.regions.append((pygame.Rect(808, 750, 112, 34), "achievement"))
         shade = pygame.Surface(p.canvas.get_size(), pygame.SRCALPHA)
         shade.fill((53, 45, 75, 83))
         p.canvas.blit(shade, (0, 0))
@@ -789,18 +791,24 @@ class Game:
             options = [(r, c) for r in range(len(self.board)) for c in range(len(self.board)) if self.board[r][c] != "." and can_exit(self.board, r, c)]
             if options:
                 self.hints -= 1; self.highlight = options[0]; self.hint_active = True; self.feedback, self.feedback_color = "金色箭头前方畅通，可以先点击它。", ORANGE
-        elif action == "auto_solve" and self.scene == "playing" and self.animation is None and self.auto_solve_queue is None:
-            # Solve the board as it is now. The player may have followed a
-            # hint and removed an arrow before starting the auto solver.
-            order = solve_order(self.board)
-            if order:
-                self.auto_solve_queue = list(order)
-                self.highlight = None
-                self.hint_active = False
-                self.feedback, self.feedback_color = "自动求解已开始，正在按合法顺序清空棋盘。", ACCENT
-                self.advance_auto_solve()
-            else:
-                self.feedback, self.feedback_color = "当前棋盘没有可用的完整解序。", RED
+        elif action == "auto_solve" and self.scene == "playing":
+            if self.auto_solve_queue is not None:
+                # Let the arrow already in flight finish, but do not schedule
+                # another automatic move afterwards.
+                self.auto_solve_queue = None
+                self.feedback, self.feedback_color = "自动求解已停止，当前箭头结束后可继续手动操作。", MUTED
+            elif self.animation is None:
+                # Solve the board as it is now. The player may have followed a
+                # hint and removed an arrow before starting the auto solver.
+                order = solve_order(self.board)
+                if order:
+                    self.auto_solve_queue = list(order)
+                    self.highlight = None
+                    self.hint_active = False
+                    self.feedback, self.feedback_color = "自动求解已开始，再次点击按钮可停止。", ACCENT
+                    self.advance_auto_solve()
+                else:
+                    self.feedback, self.feedback_color = "当前棋盘没有可用的完整解序。", RED
         elif action == "next": self.reset_level(self.level_index + 1)
         elif action == "first": self.reset_level(0)
         elif isinstance(action, tuple) and action[0] == "level": self.reset_level(action[1])
