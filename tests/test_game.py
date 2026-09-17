@@ -5,6 +5,7 @@ os.environ['SDL_AUDIODRIVER'] = 'dummy'
 
 import json
 import math
+import shutil
 from array import array
 from pathlib import Path
 import tempfile
@@ -432,6 +433,34 @@ class GameTests(unittest.TestCase):
         game.select_arrow(2, 2)
         self.assertEqual(game.animation['duration'], COLLISION_DURATION)
         self.assertLessEqual(COLLISION_DURATION, .16)
+
+    def test_three_achievements_and_persistent_endless_progress(self):
+        game = self.game
+        self.assertEqual([item[0] for item in game.achievement_items()], ["👍", "完美通关", "我爱arrow"])
+        self.assertFalse(game.campaign_complete)
+        self.assertFalse(game.perfect_complete)
+        self.assertFalse(game.endless_three)
+        game.best = {
+            str(index): {"mistakes": 0, "hints": 0, "elapsed_ms": 1000, "stars": 3}
+            for index in range(len(LEVELS))
+        }
+        self.assertTrue(game.campaign_complete)
+        self.assertTrue(game.perfect_complete)
+        game.endless_total_clears = 3
+        self.assertTrue(game.endless_three)
+        progress_dir = Path('.achievement-progress-test')
+        shutil.rmtree(progress_dir, ignore_errors=True)
+        persistent = Game(str(progress_dir))
+        persistent.best = game.best
+        persistent.endless_total_clears = game.endless_total_clears
+        persistent.save_progress()
+        restored = Game(str(progress_dir))
+        self.assertEqual(restored.endless_total_clears, 3)
+        self.assertTrue(restored.campaign_complete)
+        self.assertTrue(restored.perfect_complete)
+        self.assertTrue(restored.endless_three)
+        shutil.rmtree(progress_dir, ignore_errors=True)
+        pygame.quit()
 
     def test_old_progress_keeps_unlocks_without_fabricating_times(self):
         old = {'unlocked': 4, 'best': {'0': {'mistakes': 0, 'hints': 1}}, 'sound': False}

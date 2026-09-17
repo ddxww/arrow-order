@@ -200,6 +200,7 @@ class Game:
         self.endless_level = None
         self.endless_round = 0
         self.endless_clears = 0
+        self.endless_total_clears = 0
         self.endless_round_cleared = False
         self.endless_reward_shown = False
         self.endless_rng = random.Random()
@@ -238,6 +239,16 @@ class Game:
         try:
             data = json.loads(self.progress_file.read_text(encoding="utf-8"))
             self.unlocked = max(1, min(len(LEVELS), int(data.get("unlocked", 1))))
+            raw_achievements = data.get("achievements", {})
+            if not isinstance(raw_achievements, dict):
+                raw_achievements = {}
+            total_clears = data.get("endless_total_clears", raw_achievements.get("endless_clears", 0))
+            try:
+                self.endless_total_clears = max(0, int(total_clears))
+            except (TypeError, ValueError):
+                self.endless_total_clears = 0
+            if raw_achievements.get("love_arrow"):
+                self.endless_total_clears = max(3, self.endless_total_clears)
             raw_best = data.get("best", {})
             self.best = {}
             if isinstance(raw_best, dict):
@@ -250,16 +261,28 @@ class Game:
             self.sound.music_enabled = bool(data.get("music", True)) and self.sound.music is not None
         except FileNotFoundError:
             self.unlocked, self.best = 1, {}
+            self.endless_total_clears = 0
         except (OSError, ValueError, TypeError, AttributeError):
             self.unlocked, self.best = 1, {}
+            self.endless_total_clears = 0
             self.storage_message = "存档无法读取，已恢复默认进度。"
 
     def save_progress(self):
         try:
             self.progress_file.parent.mkdir(parents=True, exist_ok=True)
             temporary = self.progress_file.with_suffix(".tmp")
-            temporary.write_text(json.dumps({"unlocked": self.unlocked, "best": self.best, "sound": self.sound.enabled, "music": self.sound.music_enabled,
-                                              "achievements": {"thumbs_up": self.achievement_unlocked}}, ensure_ascii=False, indent=2), encoding="utf-8")
+            temporary.write_text(json.dumps({
+                "unlocked": self.unlocked,
+                "best": self.best,
+                "sound": self.sound.enabled,
+                "music": self.sound.music_enabled,
+                "endless_total_clears": self.endless_total_clears,
+                "achievements": {
+                    "thumbs_up": self.campaign_complete,
+                    "perfect_clear": self.perfect_complete,
+                    "love_arrow": self.endless_three,
+                },
+            }, ensure_ascii=False, indent=2), encoding="utf-8")
             temporary.replace(self.progress_file)
         except OSError:
             self.storage_message = "进度暂未保存，本次游戏仍可继续。"
@@ -269,9 +292,32 @@ class Game:
         return self.endless_level if self.mode == 'endless' else LEVELS[self.level_index]
 
     @property
-    def achievement_unlocked(self):
+    def campaign_complete(self):
         """The thumbs-up achievement is earned by clearing every campaign level."""
         return all(str(index) in self.best for index in range(len(LEVELS)))
+
+    @property
+    def perfect_complete(self):
+        """The perfect-clear achievement requires three stars on every level."""
+        return len(self.best) == len(LEVELS) and all(self.best[str(index)].get("stars", 0) >= 3 for index in range(len(LEVELS)))
+
+    @property
+    def endless_three(self):
+        return self.endless_total_clears >= 3
+
+    @property
+    def achievement_unlocked(self):
+        """Backward-compatible alias for the original thumbs-up achievement."""
+        return self.campaign_complete
+
+    def achievement_items(self):
+        completed = sum(str(index) in self.best for index in range(len(LEVELS)))
+        perfect = sum(self.best.get(str(index), {}).get("stars", 0) >= 3 for index in range(len(LEVELS)))
+        return (
+            ("👍", "全部关卡完成", self.campaign_complete, f"{completed} / {len(LEVELS)} 个关卡", "thumb"),
+            ("完美通关", "全部三星通关", self.perfect_complete, f"{perfect} / {len(LEVELS)} 个三星", "trophy"),
+            ("我爱arrow", "无尽模式通过三关", self.endless_three, f"{min(self.endless_total_clears, 3)} / 3 个无尽关卡", "arrow"),
+        )
 
     def start_endless(self):
         self.mode = 'endless'
@@ -341,8 +387,9 @@ class Game:
         trophy_rect = pygame.Rect(808, 750, 112, 34)
         self.painter.box((715, 748, 205, 39), BG, 0)
         self.painter.box(trophy_rect, PANEL, 11, LINE)
-        trophy_color = GOLD if self.achievement_unlocked else MUTED
-        self.draw_trophy_icon((827, 767), trophy_color, locked=not self.achievement_unlocked)
+        any_achievement = any(item[2] for item in self.achievement_items())
+        trophy_color = GOLD if any_achievement else MUTED
+        self.draw_trophy_icon((827, 767), trophy_color, locked=not any_achievement)
         self.painter.text("成就", 845, 758, 14, trophy_color)
         self.regions.append((trophy_rect, "achievement"))
 
@@ -520,29 +567,44 @@ class Game:
                             [(round(x * 2), round(y * 2)) for x, y in points])
         self.painter.box((cx - 11*s, cy - 1*s, 5*s, 14*s), color, radius=2)
 
+    def draw_star_icon(self, center, color, scale=1.0):
+        cx, cy = center
+        points = []
+        for index in range(10):
+            angle = -math.pi / 2 + index * math.pi / 5
+            radius = 13 * scale if index % 2 == 0 else 6 * scale
+            points.append((round((cx + math.cos(angle) * radius) * 2),
+                           round((cy + math.sin(angle) * radius) * 2)))
+        pygame.draw.polygon(self.painter.canvas, color, points)
+
+    def draw_arrow_icon(self, center, color, scale=1.0):
+        self.painter.arrow(center, "R", 25 * scale, color, max(2, round(4 * scale)))
+
     def draw_achievement_panel(self):
         p = self.painter
         self.regions.clear()
         shade = pygame.Surface(p.canvas.get_size(), pygame.SRCALPHA)
         shade.fill((0, 0, 0, 150))
         p.canvas.blit(shade, (0, 0))
-        p.box((220, 178, 520, 404), PANEL, 24, LINE)
-        p.text("成就", 480, 211, 30, INK, center=True)
-        p.text("通关记录", 480, 258, 14, MUTED, center=True)
-        color = GOLD if self.achievement_unlocked else MUTED
-        p.circle((480, 350), 58, PALE)
-        self.draw_trophy_icon((480, 347), color, locked=not self.achievement_unlocked)
-        if self.achievement_unlocked:
-            self.draw_thumb_icon((480, 436), GOLD, 1.35)
-            p.text("全部关卡完成", 480, 466, 19, INK, center=True)
-            p.text("成就已解锁", 480, 499, 14, CYAN, center=True)
-        else:
-            completed = sum(str(index) in self.best for index in range(len(LEVELS)))
-            self.draw_trophy_icon((480, 427), MUTED, locked=True)
-            self.draw_thumb_icon((480, 470), MUTED, 0.9)
-            p.text(f"完成全部 {len(LEVELS)} 个关卡后解锁", 480, 498, 14, MUTED, center=True)
-            p.text(f"当前进度 {completed} / {len(LEVELS)}", 480, 523, 13, ACCENT, center=True)
-        self.button("关闭", (415, 546, 130, 38), "achievement_close")
+        p.box((168, 112, 624, 568), PANEL, 24, LINE)
+        p.text("成就", 480, 140, 30, INK, center=True)
+        p.text("完成挑战，收集你的通关徽章", 480, 181, 14, MUTED, center=True)
+        icons = {
+            "thumb": self.draw_thumb_icon,
+            "trophy": lambda center, color, scale: self.draw_trophy_icon(center, color),
+            "arrow": self.draw_arrow_icon,
+        }
+        for index, (title, condition, unlocked, progress, icon) in enumerate(self.achievement_items()):
+            y = 220 + index * 112
+            color = GOLD if unlocked else MUTED
+            p.box((206, y, 548, 88), PALE, 14, GOLD if unlocked else LINE)
+            p.circle((254, y + 44), 26, "#382B18" if unlocked else "#202027")
+            icons[icon]((254, y + 44), color, 1.0)
+            p.text(title, 300, y + 18, 18, INK if unlocked else MUTED)
+            p.text(condition, 300, y + 47, 12, MUTED)
+            p.text(progress, 680, y + 32, 13, CYAN if unlocked else ACCENT, center=True)
+            p.text("已解锁" if unlocked else "未解锁", 680, y + 55, 11, color, center=True)
+        self.button("关闭", (415, 626, 130, 38), "achievement_close")
 
     def draw_stars(self, count, center_x, center_y, radius=23, spacing=76):
         for index in range(3):
@@ -843,7 +905,9 @@ class Game:
                 if self.mode == 'endless':
                     if not self.endless_round_cleared:
                         self.endless_clears += 1
+                        self.endless_total_clears += 1
                         self.endless_round_cleared = True
+                        self.save_progress()
                     self.result_stars, self.result_record = 0, None
                     self.victory_started = time.monotonic()
                     self.sound.play('win')
