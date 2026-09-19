@@ -17,7 +17,7 @@
 
 ## Windows 运行
 
-完整游戏可直接运行 `dist/ArrowOrder.exe`，不需要安装 Python 或联网。首次启动后，游戏会在用户的 APPDATA 目录保存进度。发布 EXE 时请同时保留字体许可文件 `assets/fonts/OFL.txt`。
+完整游戏可直接运行 `dist/ArrowOrder.exe`，不需要安装 Python 或联网。v1.0.1 使用独立的 `progress_v1.json` 存档名，首次启动不会继承旧预览版的成就或关卡记录；之后的进度会在用户的 APPDATA 目录保存。发布 EXE 时请同时保留字体许可文件 `assets/fonts/OFL.txt`。
 
 在开发环境运行：
 

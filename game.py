@@ -50,9 +50,11 @@ def progress_path() -> Path:
     root = Path(os.environ.get("APPDATA", Path.home())) / "ArrowOrder"
     try:
         root.mkdir(parents=True, exist_ok=True)
-        return root / "progress.json"
+        # v1 starts with a clean profile so records from earlier preview builds
+        # cannot unexpectedly unlock achievements in the released game.
+        return root / "progress_v1.json"
     except OSError:
-        return Path.cwd() / ".arrow_order_progress.json"
+        return Path.cwd() / ".arrow_order_progress_v1.json"
 
 
 class SoundKit:

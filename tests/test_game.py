@@ -58,6 +58,23 @@ class GameTests(unittest.TestCase):
         self.game.load_progress()
         self.assertFalse(self.game.sound.music_enabled)
 
+    def test_released_profile_does_not_read_legacy_progress(self):
+        with tempfile.TemporaryDirectory() as appdata:
+            legacy = Path(appdata) / 'ArrowOrder' / 'progress.json'
+            legacy.parent.mkdir(parents=True, exist_ok=True)
+            legacy.write_text(json.dumps({
+                'unlocked': len(LEVELS),
+                'best': {str(index): {'stars': 3} for index in range(len(LEVELS))},
+                'endless_total_clears': 3,
+            }), encoding='utf-8')
+            with patch.dict(os.environ, {'APPDATA': appdata}, clear=False):
+                fresh = Game()
+            self.assertEqual(fresh.progress_file.name, 'progress_v1.json')
+            self.assertEqual(fresh.unlocked, 1)
+            self.assertEqual(fresh.best, {})
+            self.assertEqual(fresh.endless_total_clears, 0)
+            pygame.quit()
+
     def test_missing_audio_device_does_not_enable_saved_audio(self):
         self.game.save_progress()
         pygame.mixer.quit()
