@@ -231,6 +231,7 @@ class Game:
         self.unlocked = 1
         self.best = {}
         self.regions = []
+        self.pointer = None
         self.progress_file = Path(data_dir) / "progress.json" if data_dir is not None else progress_path()
         self.storage_message = ""
         self.achievement_open = False
@@ -373,7 +374,8 @@ class Game:
         return ((point[0] - offset[0]) / scale, (point[1] - offset[1]) / scale)
 
     def button(self, label, rect, action, primary=False, enabled=True):
-        self.painter.button(label, rect, action, primary, enabled)
+        hovered = bool(enabled and self.pointer is not None and pygame.Rect(rect).collidepoint(self.pointer))
+        self.painter.button(label, rect, action, primary, enabled, hovered=hovered)
         if enabled:
             self.regions.append((pygame.Rect(rect), action))
 
@@ -388,7 +390,8 @@ class Game:
         # the home, level-select, and gameplay screens.
         trophy_rect = pygame.Rect(808, 750, 112, 34)
         self.painter.box((715, 748, 205, 39), BG, 0)
-        self.painter.box(trophy_rect, PANEL, 11, LINE)
+        trophy_hovered = self.pointer is not None and trophy_rect.collidepoint(self.pointer)
+        self.painter.box(trophy_rect, "#28233A" if trophy_hovered else PANEL, 11, ACCENT if trophy_hovered else LINE, 2 if trophy_hovered else 1)
         any_achievement = any(item[2] for item in self.achievement_items())
         trophy_color = GOLD if any_achievement else MUTED
         self.draw_trophy_icon((827, 767), trophy_color, locked=not any_achievement)
@@ -440,7 +443,11 @@ class Game:
             x, y = 64 + i % 3 * 283, 241 + i // 3 * 212
             unlocked = i < self.unlocked
             completed = str(i) in self.best
-            p.box((x, y, 266, 187), PANEL if unlocked else "#111014", 20, ACCENT if unlocked and i == self.level_index else LINE)
+            card_rect = pygame.Rect(x, y, 266, 187)
+            card_hovered = unlocked and self.pointer is not None and card_rect.collidepoint(self.pointer)
+            p.box((x, y, 266, 187), "#28233A" if card_hovered else PANEL if unlocked else "#111014", 20,
+                  ACCENT if card_hovered or (unlocked and i == self.level_index) else LINE,
+                  2 if card_hovered else 1)
             p.text(f"0{i + 1}", x + 23, y + 23, 33, ACCENT if unlocked else "#77717F")
             p.pill("已完成" if completed else "可挑战" if unlocked else "待解锁", (x + 164, y + 24, 80, 28), PALE, ACCENT if unlocked else MUTED, 12)
             p.text(level.name, x + 23, y + 80, 22, INK if unlocked else MUTED)
@@ -969,7 +976,9 @@ class Game:
                     if event.key == pygame.K_ESCAPE: running = False
                     elif event.key == pygame.K_r and self.scene == "playing": self.reset_level()
                 elif event.type == pygame.VIDEORESIZE: self.screen = pygame.display.set_mode(event.size, pygame.RESIZABLE)
-                elif event.type == pygame.MOUSEMOTION and self.scene == "playing" and self.animation is None: self.hover = self.board_cell(self.logical_point(event.pos))
+                elif event.type == pygame.MOUSEMOTION:
+                    self.pointer = self.logical_point(event.pos)
+                    self.hover = self.board_cell(self.pointer) if self.scene == "playing" and self.animation is None else None
                 elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1: self.click(self.logical_point(event.pos))
             self.update(); frame = self.render(); sw, sh = self.screen.get_size(); scale = min(sw / SIZE[0], sh / SIZE[1]); fitted = (round(SIZE[0]*scale), round(SIZE[1]*scale)); offset=((sw-fitted[0])//2,(sh-fitted[1])//2); self.screen.fill(BG); self.screen.blit(pygame.transform.smoothscale(frame, fitted), offset); pygame.display.flip(); clock.tick(FPS)
         self.save_progress(); pygame.quit()

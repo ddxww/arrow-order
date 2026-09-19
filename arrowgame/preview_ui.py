@@ -142,11 +142,15 @@ class Painter:
         self.box(rect, bg, radius=rect[3] // 2)
         self.text(label, rect[0] + rect[2] / 2, rect[1] + (rect[3] - size) / 2, size, fg, center=True)
 
-    def button(self, label, rect, target, primary=False, enabled=True):
+    def button(self, label, rect, target, primary=False, enabled=True, hovered=False):
         fill = ACCENT if primary else PANEL
         fg = WHITE if primary else ACCENT
         if not enabled:
             fill, fg = PALE, MUTED
+        elif hovered:
+            fill = "#C6BAFF" if primary else "#28233A"
+            fg = WHITE if primary else "#D8D0FF"
+            self.box((rect[0] - 2, rect[1] - 2, rect[2] + 4, rect[3] + 4), fill, 16, CYAN if primary else ACCENT, 2)
         self.box(rect, fill, 14, None if primary else LINE)
         self.text(label, rect[0] + rect[2] / 2, rect[1] + (rect[3] - 17) / 2, 17, fg, center=True)
         if enabled:
