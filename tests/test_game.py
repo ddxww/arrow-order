@@ -60,19 +60,26 @@ class GameTests(unittest.TestCase):
 
     def test_released_profile_does_not_read_legacy_progress(self):
         with tempfile.TemporaryDirectory() as appdata:
-            legacy = Path(appdata) / 'ArrowOrder' / 'progress.json'
+            legacy = Path(appdata) / 'ArrowOrder' / 'progress_v1.json'
             legacy.parent.mkdir(parents=True, exist_ok=True)
-            legacy.write_text(json.dumps({
+            legacy_content = json.dumps({
                 'unlocked': len(LEVELS),
                 'best': {str(index): {'stars': 3} for index in range(len(LEVELS))},
-                'endless_total_clears': 3,
-            }), encoding='utf-8')
+                'endless_total_clears': 99,
+                'endless_best_clears': 99,
+                'endless_save': {'version': 1},
+            })
+            legacy.write_text(legacy_content, encoding='utf-8')
             with patch.dict(os.environ, {'APPDATA': appdata}, clear=False):
                 fresh = Game()
-            self.assertEqual(fresh.progress_file.name, 'progress_v1.json')
+            self.assertEqual(fresh.progress_file.name, 'progress_v2.json')
             self.assertEqual(fresh.unlocked, 1)
             self.assertEqual(fresh.best, {})
             self.assertEqual(fresh.endless_total_clears, 0)
+            self.assertEqual(fresh.endless_best_clears, 0)
+            self.assertIsNone(fresh.endless_save)
+            self.assertFalse(any(item[2] for item in fresh.achievement_items()))
+            self.assertEqual(legacy.read_text(encoding='utf-8'), legacy_content)
             pygame.quit()
 
     def test_missing_audio_device_does_not_enable_saved_audio(self):
@@ -451,12 +458,17 @@ class GameTests(unittest.TestCase):
         self.assertEqual(game.animation['duration'], COLLISION_DURATION)
         self.assertLessEqual(COLLISION_DURATION, .16)
 
-    def test_three_achievements_and_persistent_endless_progress(self):
+    def test_four_achievements_and_persistent_endless_progress(self):
         game = self.game
-        self.assertEqual([item[0] for item in game.achievement_items()], ["👍", "完美通关", "我爱arrow"])
+        self.assertEqual(
+            [item[0] for item in game.achievement_items()],
+            ["👍", "完美通关", "我爱arrow", "有点牛逼"],
+        )
+        self.assertEqual(game.achievement_items()[3][4], "cow")
         self.assertFalse(game.campaign_complete)
         self.assertFalse(game.perfect_complete)
         self.assertFalse(game.endless_three)
+        self.assertFalse(game.endless_ten)
         game.best = {
             str(index): {"mistakes": 0, "hints": 0, "elapsed_ms": 1000, "stars": 3}
             for index in range(len(LEVELS))
@@ -465,19 +477,38 @@ class GameTests(unittest.TestCase):
         self.assertTrue(game.perfect_complete)
         game.endless_total_clears = 3
         self.assertTrue(game.endless_three)
+        game.endless_best_clears = 9
+        self.assertFalse(game.endless_ten)
+        game.endless_best_clears = 10
+        self.assertTrue(game.endless_ten)
+        self.assertEqual(game.achievement_items()[3][3], "10 / 10 个无尽关卡")
         progress_dir = Path('.achievement-progress-test')
         shutil.rmtree(progress_dir, ignore_errors=True)
         persistent = Game(str(progress_dir))
         persistent.best = game.best
         persistent.endless_total_clears = game.endless_total_clears
+        persistent.endless_best_clears = game.endless_best_clears
         persistent.save_progress()
         restored = Game(str(progress_dir))
         self.assertEqual(restored.endless_total_clears, 3)
+        self.assertEqual(restored.endless_best_clears, 10)
         self.assertTrue(restored.campaign_complete)
         self.assertTrue(restored.perfect_complete)
         self.assertTrue(restored.endless_three)
+        self.assertTrue(restored.endless_ten)
         shutil.rmtree(progress_dir, ignore_errors=True)
         pygame.quit()
+
+    def test_four_achievement_panel_renders_cow_icon(self):
+        game = self.game
+        game.endless_best_clears = 10
+        game.action('achievement')
+        game.render()
+        rendered_text = [text for text, _ in game.painter.text_bounds]
+        self.assertIn('有点牛逼', rendered_text)
+        self.assertIn('单次无尽模式通过十关', rendered_text)
+        self.assertTrue(game.endless_ten)
+        self.assertIn((pygame.Rect(415, 656, 130, 38), 'achievement_close'), game.regions)
 
     def test_old_progress_keeps_unlocks_without_fabricating_times(self):
         old = {'unlocked': 4, 'best': {'0': {'mistakes': 0, 'hints': 1}}, 'sound': False}

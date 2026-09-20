@@ -50,11 +50,11 @@ def progress_path() -> Path:
     root = Path(os.environ.get("APPDATA", Path.home())) / "ArrowOrder"
     try:
         root.mkdir(parents=True, exist_ok=True)
-        # v1 starts with a clean profile so records from earlier preview builds
-        # cannot unexpectedly unlock achievements in the released game.
-        return root / "progress_v1.json"
+        # v2 deliberately starts with a clean profile. Existing v1 records stay
+        # untouched, but cannot pre-unlock achievements in this release.
+        return root / "progress_v2.json"
     except OSError:
-        return Path.cwd() / ".arrow_order_progress_v1.json"
+        return Path.cwd() / ".arrow_order_progress_v2.json"
 
 
 class SoundKit:
@@ -203,6 +203,7 @@ class Game:
         self.endless_round = 0
         self.endless_clears = 0
         self.endless_total_clears = 0
+        self.endless_best_clears = 0
         self.endless_save = None
         self.endless_round_cleared = False
         self.endless_reward_shown = False
@@ -253,7 +254,16 @@ class Game:
                 self.endless_total_clears = 0
             if raw_achievements.get("love_arrow"):
                 self.endless_total_clears = max(3, self.endless_total_clears)
+            best_clears = data.get("endless_best_clears", 0)
+            try:
+                self.endless_best_clears = max(0, int(best_clears))
+            except (TypeError, ValueError):
+                self.endless_best_clears = 0
+            if raw_achievements.get("endless_ten"):
+                self.endless_best_clears = max(10, self.endless_best_clears)
             self.endless_save = self.parse_endless_save(data.get("endless_save"))
+            if self.endless_save is not None:
+                self.endless_best_clears = max(self.endless_best_clears, self.endless_save["clears"])
             raw_best = data.get("best", {})
             self.best = {}
             if isinstance(raw_best, dict):
@@ -267,10 +277,12 @@ class Game:
         except FileNotFoundError:
             self.unlocked, self.best = 1, {}
             self.endless_total_clears = 0
+            self.endless_best_clears = 0
             self.endless_save = None
         except (OSError, ValueError, TypeError, AttributeError):
             self.unlocked, self.best = 1, {}
             self.endless_total_clears = 0
+            self.endless_best_clears = 0
             self.endless_save = None
             self.storage_message = "存档无法读取，已恢复默认进度。"
 
@@ -334,11 +346,13 @@ class Game:
                 "sound": self.sound.enabled,
                 "music": self.sound.music_enabled,
                 "endless_total_clears": self.endless_total_clears,
+                "endless_best_clears": self.endless_best_clears,
                 "endless_save": self.endless_save,
                 "achievements": {
                     "thumbs_up": self.campaign_complete,
                     "perfect_clear": self.perfect_complete,
                     "love_arrow": self.endless_three,
+                    "endless_ten": self.endless_ten,
                 },
             }, ensure_ascii=False, indent=2), encoding="utf-8")
             temporary.replace(self.progress_file)
@@ -415,6 +429,11 @@ class Game:
         return self.endless_total_clears >= 3
 
     @property
+    def endless_ten(self):
+        """Earned after clearing ten levels in one endless run."""
+        return self.endless_best_clears >= 10
+
+    @property
     def achievement_unlocked(self):
         """Backward-compatible alias for the original thumbs-up achievement."""
         return self.campaign_complete
@@ -426,6 +445,7 @@ class Game:
             ("👍", "全部关卡完成", self.campaign_complete, f"{completed} / {len(LEVELS)} 个关卡", "thumb"),
             ("完美通关", "全部三星通关", self.perfect_complete, f"{perfect} / {len(LEVELS)} 个三星", "trophy"),
             ("我爱arrow", "无尽模式通过三关", self.endless_three, f"{min(self.endless_total_clears, 3)} / 3 个无尽关卡", "arrow"),
+            ("有点牛逼", "单次无尽模式通过十关", self.endless_ten, f"{min(self.endless_best_clears, 10)} / 10 个无尽关卡", "cow"),
         )
 
     def start_endless(self):
@@ -706,22 +726,49 @@ class Game:
     def draw_arrow_icon(self, center, color, scale=1.0):
         self.painter.arrow(center, "R", 25 * scale, color, max(2, round(4 * scale)))
 
+    def draw_cow_icon(self, center, color, scale=1.0):
+        """Draw a compact cow-face emoji that survives one-file packaging."""
+        p = self.painter
+        cx, cy = center
+        s = scale
+        unlocked = color == GOLD
+        face = "#F5E7C8" if unlocked else "#48464E"
+        muzzle = "#E5A7A0" if unlocked else "#6A6670"
+        patch = "#6F4A35" if unlocked else "#302F35"
+        ink = "#241B18" if unlocked else "#1D1C21"
+        horns = [
+            [(cx - 9*s, cy - 9*s), (cx - 17*s, cy - 15*s), (cx - 13*s, cy - 5*s)],
+            [(cx + 9*s, cy - 9*s), (cx + 17*s, cy - 15*s), (cx + 13*s, cy - 5*s)],
+        ]
+        for points in horns:
+            pygame.draw.polygon(p.canvas, color, [(round(x*2), round(y*2)) for x, y in points])
+        pygame.draw.ellipse(p.canvas, patch, p.rect_scaled((cx-18*s, cy-7*s, 10*s, 11*s)))
+        pygame.draw.ellipse(p.canvas, patch, p.rect_scaled((cx+8*s, cy-7*s, 10*s, 11*s)))
+        pygame.draw.ellipse(p.canvas, face, p.rect_scaled((cx-13*s, cy-13*s, 26*s, 28*s)))
+        pygame.draw.ellipse(p.canvas, patch, p.rect_scaled((cx-10*s, cy-10*s, 9*s, 10*s)))
+        p.circle((cx-6*s, cy-2*s), 2.1*s, ink)
+        p.circle((cx+6*s, cy-2*s), 2.1*s, ink)
+        pygame.draw.ellipse(p.canvas, muzzle, p.rect_scaled((cx-9*s, cy+3*s, 18*s, 10*s)))
+        p.circle((cx-4*s, cy+8*s), 1.3*s, ink)
+        p.circle((cx+4*s, cy+8*s), 1.3*s, ink)
+
     def draw_achievement_panel(self):
         p = self.painter
         self.regions.clear()
         shade = pygame.Surface(p.canvas.get_size(), pygame.SRCALPHA)
         shade.fill((0, 0, 0, 150))
         p.canvas.blit(shade, (0, 0))
-        p.box((168, 112, 624, 568), PANEL, 24, LINE)
-        p.text("成就", 480, 140, 30, INK, center=True)
-        p.text("完成挑战，收集你的通关徽章", 480, 181, 14, MUTED, center=True)
+        p.box((168, 72, 624, 656), PANEL, 24, LINE)
+        p.text("成就", 480, 100, 30, INK, center=True)
+        p.text("完成挑战，收集你的通关徽章", 480, 141, 14, MUTED, center=True)
         icons = {
             "thumb": self.draw_thumb_icon,
             "trophy": lambda center, color, scale: self.draw_trophy_icon(center, color),
             "arrow": self.draw_arrow_icon,
+            "cow": self.draw_cow_icon,
         }
         for index, (title, condition, unlocked, progress, icon) in enumerate(self.achievement_items()):
-            y = 220 + index * 112
+            y = 178 + index * 106
             color = GOLD if unlocked else MUTED
             p.box((206, y, 548, 88), PALE, 14, GOLD if unlocked else LINE)
             p.circle((254, y + 44), 26, "#382B18" if unlocked else "#202027")
@@ -730,7 +777,7 @@ class Game:
             p.text(condition, 300, y + 47, 12, MUTED)
             p.text(progress, 680, y + 32, 13, CYAN if unlocked else ACCENT, center=True)
             p.text("已解锁" if unlocked else "未解锁", 680, y + 55, 11, color, center=True)
-        self.button("关闭", (415, 626, 130, 38), "achievement_close")
+        self.button("关闭", (415, 656, 130, 38), "achievement_close")
 
     def draw_stars(self, count, center_x, center_y, radius=23, spacing=76):
         for index in range(3):
@@ -1046,6 +1093,7 @@ class Game:
                     if not self.endless_round_cleared:
                         self.endless_clears += 1
                         self.endless_total_clears += 1
+                        self.endless_best_clears = max(self.endless_best_clears, self.endless_clears)
                         self.endless_round_cleared = True
                         self.endless_save = None
                         self.save_progress()
