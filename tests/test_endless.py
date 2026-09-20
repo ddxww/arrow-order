@@ -127,6 +127,37 @@ class EndlessTests(unittest.TestCase):
         self.assertIsNotNone(self.game.cg_wechat)
         self.assertIsNotNone(self.game.cg_emoji)
 
+    def test_endless_checkpoint_restores_board_round_and_attempts(self):
+        game = self.game
+        with patch('game.time.monotonic') as now:
+            now.return_value = 100
+            game.action('endless')
+            game.mistakes = 2
+            game.hints = 1
+            game.board[0][0] = '.'
+            game.timer.accumulated = 12.5
+            game.action('endless_save')
+            self.assertIsNotNone(game.endless_save)
+            restored = Game(self.temp.name)
+            self.assertIsNotNone(restored.endless_save)
+            restored.action('endless')
+            self.assertEqual(restored.mode, 'endless')
+            self.assertEqual(restored.endless_round, game.endless_round)
+            self.assertEqual(restored.endless_clears, game.endless_clears)
+            self.assertEqual(restored.mistakes, 2)
+            self.assertEqual(restored.hints, 1)
+            self.assertEqual(restored.board[0][0], '.')
+            self.assertEqual(restored.timer.elapsed_ms(), 12500)
+
+    def test_clearing_endless_round_removes_completed_checkpoint(self):
+        game = self.game
+        with patch('game.time.monotonic') as now:
+            now.return_value = 100
+            game.action('endless')
+            self.assertIsNotNone(game.endless_save)
+            self.clear_current(now)
+            self.assertIsNone(game.endless_save)
+
 
 if __name__ == '__main__':
     unittest.main()

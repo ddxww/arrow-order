@@ -17,10 +17,10 @@ from pathlib import Path
 
 import pygame
 
-from arrowgame.levels import LEVELS
+from arrowgame.levels import LEVELS, Level
 from arrowgame.effects import DangerVignette, HEARTBEAT_PERIOD, HEARTBEAT_PULSES
 from arrowgame.preview_ui import Painter, BG, PANEL, INK, MUTED, ACCENT, CYAN, GOLD, PALE, LINE, WHITE, ORANGE, RED, DIRECTION_COLORS
-from arrowgame.rules import can_exit, first_blocker, solve_order
+from arrowgame.rules import can_exit, first_blocker, solve_order, validate_board
 from arrowgame.scoring import LevelTimer, award_stars, better_record, clean_record, format_time
 from arrowgame.endless import generate_level
 from arrowgame.cg import AnimatedSticker, load_image
@@ -203,6 +203,7 @@ class Game:
         self.endless_round = 0
         self.endless_clears = 0
         self.endless_total_clears = 0
+        self.endless_save = None
         self.endless_round_cleared = False
         self.endless_reward_shown = False
         self.endless_rng = random.Random()
@@ -252,6 +253,7 @@ class Game:
                 self.endless_total_clears = 0
             if raw_achievements.get("love_arrow"):
                 self.endless_total_clears = max(3, self.endless_total_clears)
+            self.endless_save = self.parse_endless_save(data.get("endless_save"))
             raw_best = data.get("best", {})
             self.best = {}
             if isinstance(raw_best, dict):
@@ -265,10 +267,62 @@ class Game:
         except FileNotFoundError:
             self.unlocked, self.best = 1, {}
             self.endless_total_clears = 0
+            self.endless_save = None
         except (OSError, ValueError, TypeError, AttributeError):
             self.unlocked, self.best = 1, {}
             self.endless_total_clears = 0
+            self.endless_save = None
             self.storage_message = "存档无法读取，已恢复默认进度。"
+
+    @staticmethod
+    def parse_endless_save(raw):
+        """Validate an endless checkpoint before it reaches live game state."""
+        if not isinstance(raw, dict) or raw.get("version") != 1:
+            return None
+        try:
+            round_number = int(raw["round"])
+            clears = int(raw["clears"])
+            mistakes = int(raw["mistakes"])
+            hints = int(raw["hints"])
+            elapsed_ms = int(raw["elapsed_ms"])
+            level_data = raw["level"]
+            rows = tuple(level_data["rows"])
+            board = tuple(raw["board"])
+            if not 1 <= round_number <= 10**6 or not 0 <= clears < round_number:
+                return None
+            if mistakes not in (1, 2, 3) or not 0 <= hints <= 3 or not 0 <= elapsed_ms <= 10**12:
+                return None
+            if not 5 <= len(rows) <= 7 or any(type(row) is not str or len(row) != len(rows) for row in rows):
+                return None
+            if len(board) != len(rows) or any(type(row) is not str or len(row) != len(rows) for row in board):
+                return None
+            validate_board(rows, require_all_directions=True)
+            for original_row, saved_row in zip(rows, board):
+                if any(saved not in (".", original) for original, saved in zip(original_row, saved_row)):
+                    return None
+            if not any(cell != "." for row in board for cell in row):
+                return None
+            validate_board(board)
+            level = {
+                "number": round_number,
+                "name": str(level_data.get("name", f"无尽序列 {round_number:02d}"))[:40],
+                "difficulty": str(level_data.get("difficulty", "无尽"))[:20],
+                "rows": list(rows),
+                "tip": str(level_data.get("tip", "观察当前棋盘，寻找畅通的箭头。"))[:120],
+            }
+            return {
+                "version": 1,
+                "round": round_number,
+                "clears": clears,
+                "reward_shown": bool(raw.get("reward_shown", clears >= 3)),
+                "level": level,
+                "board": list(board),
+                "mistakes": mistakes,
+                "hints": hints,
+                "elapsed_ms": elapsed_ms,
+            }
+        except (KeyError, TypeError, ValueError):
+            return None
 
     def save_progress(self):
         try:
@@ -280,6 +334,7 @@ class Game:
                 "sound": self.sound.enabled,
                 "music": self.sound.music_enabled,
                 "endless_total_clears": self.endless_total_clears,
+                "endless_save": self.endless_save,
                 "achievements": {
                     "thumbs_up": self.campaign_complete,
                     "perfect_clear": self.perfect_complete,
@@ -289,6 +344,57 @@ class Game:
             temporary.replace(self.progress_file)
         except OSError:
             self.storage_message = "进度暂未保存，本次游戏仍可继续。"
+
+    def capture_endless_save(self):
+        if self.mode != "endless" or self.scene != "playing" or self.endless_level is None:
+            return False
+        self.endless_save = {
+            "version": 1,
+            "round": self.endless_round,
+            "clears": self.endless_clears,
+            "reward_shown": self.endless_reward_shown,
+            "level": {
+                "number": self.endless_level.number,
+                "name": self.endless_level.name,
+                "difficulty": self.endless_level.difficulty,
+                "rows": list(self.endless_level.rows),
+                "tip": self.endless_level.tip,
+            },
+            "board": ["".join(row) for row in self.board],
+            "mistakes": self.mistakes,
+            "hints": self.hints,
+            "elapsed_ms": self.timer.elapsed_ms(),
+        }
+        return True
+
+    def resume_endless(self):
+        saved = self.parse_endless_save(self.endless_save)
+        if saved is None:
+            self.endless_save = None
+            self.start_endless()
+            return
+        level_data = saved["level"]
+        self.mode = "endless"
+        self.endless_round = saved["round"]
+        self.endless_clears = saved["clears"]
+        self.endless_reward_shown = saved["reward_shown"]
+        self.endless_level = Level(
+            level_data["number"], level_data["name"], level_data["difficulty"],
+            tuple(level_data["rows"]), level_data["tip"]
+        )
+        self.board = [list(row) for row in saved["board"]]
+        self.mistakes, self.hints = saved["mistakes"], saved["hints"]
+        self.endless_round_cleared = False
+        self.animation = self.auto_solve_queue = None
+        self.highlight = self.hover = None
+        self.hint_active = False
+        self.fail_intro_started = self.last_chance_started = None
+        self.feedback, self.feedback_color = "无尽模式存档已恢复。", CYAN
+        self.scene = "playing"
+        self.timer.accumulated = saved["elapsed_ms"] / 1000
+        self.timer.started = time.monotonic()
+        self.result_stars, self.result_record, self.victory_started = 0, None, None
+        self.sync_game_audio()
 
     @property
     def current_level(self):
@@ -326,6 +432,7 @@ class Game:
         self.mode = 'endless'
         self.endless_round, self.endless_clears = 0, 0
         self.endless_reward_shown = False
+        self.endless_save = None
         self.next_endless_level()
 
     def next_endless_level(self):
@@ -333,6 +440,8 @@ class Game:
         self.endless_level = generate_level(self.endless_round, self.endless_rng)
         self.endless_round_cleared = False
         self.reset_level()
+        self.capture_endless_save()
+        self.save_progress()
 
     def reset_level(self, index=None):
         if index is not None:
@@ -409,8 +518,13 @@ class Game:
         p.glow((76, 431, 208, 54), ACCENT, 14, 28, 5)
         self.button("开始游戏   →", (76, 431, 208, 54), "start", True)
         self.button("选择关卡", (299, 431, 136, 54), "levels")
-        self.button("无尽模式   →", (76, 548, 208, 38), "endless")
-        p.text("随机关卡 · 三关解锁特殊 CG", 300, 561, 12, MUTED)
+        if self.endless_save:
+            self.button("继续无尽   →", (76, 548, 208, 38), "endless")
+            self.button("新开无尽", (299, 548, 122, 38), "endless_new")
+            p.text(f"第 {self.endless_save['round']} 轮 · 已过 {self.endless_save['clears']} 关", 436, 561, 12, MUTED)
+        else:
+            self.button("无尽模式   →", (76, 548, 208, 38), "endless")
+            p.text("随机关卡 · 三关解锁特殊 CG", 300, 561, 12, MUTED)
         if self.github_mark is not None:
             self.painter.canvas.blit(self.github_mark, (826 * 2, 544 * 2))
         else:
@@ -548,6 +662,9 @@ class Game:
         self.button("重新开始", (388, 693, 130, 38), "restart")
         self.button("返回首页" if self.mode == 'endless' else "返回选关", (530, 693, 166, 38),
                     "home" if self.mode == 'endless' else "levels")
+        if self.mode == "endless":
+            self.button("保存本局", (708, 693, 112, 38), "endless_save",
+                        enabled=self.animation is None and not auto_active)
     def draw_trophy_icon(self, center, color, locked=False):
         """Draw a small trophy/lock glyph without relying on an emoji font."""
         p = self.painter
@@ -848,7 +965,16 @@ class Game:
         elif action == "sound": self.sound.toggle(); self.save_progress()
         elif action == "music": self.sound.toggle_music(); self.save_progress()
         elif action == "start": self.reset_level(next((i for i in range(len(LEVELS)) if str(i) not in self.best), 0))
-        elif action == 'endless': self.start_endless()
+        elif action == 'endless':
+            if self.scene == "home" and self.endless_save:
+                self.resume_endless()
+            else:
+                self.start_endless()
+        elif action == 'endless_new': self.start_endless()
+        elif action == 'endless_save' and self.mode == 'endless' and self.scene == 'playing' and self.animation is None:
+            if self.capture_endless_save():
+                self.save_progress()
+                self.feedback, self.feedback_color = "无尽模式进度已保存。", CYAN
         elif action == 'github': webbrowser.open('https://github.com/ddxww/arrow-order', new=2)
         elif action == 'endless_next' and self.mode == 'endless' and self.scene in ('endless_win', 'endless_cg'):
             self.next_endless_level()
@@ -856,12 +982,17 @@ class Game:
             self.cg_started = time.monotonic()
             self.scene = 'endless_cg'
         elif action == "levels": self.scene, self.animation, self.auto_solve_queue = "levels", None, None
-        elif action == "home": self.scene, self.animation, self.auto_solve_queue = "home", None, None
-        elif action == "restart": self.reset_level()
+        elif action == "home":
+            if self.capture_endless_save(): self.save_progress()
+            self.scene, self.animation, self.auto_solve_queue = "home", None, None
+        elif action == "restart":
+            self.reset_level()
+            if self.capture_endless_save(): self.save_progress()
         elif action == "hint" and self.hints > 0 and self.animation is None and not self.hint_active:
             options = [(r, c) for r in range(len(self.board)) for c in range(len(self.board)) if self.board[r][c] != "." and can_exit(self.board, r, c)]
             if options:
                 self.hints -= 1; self.highlight = options[0]; self.hint_active = True; self.feedback, self.feedback_color = "金色箭头前方畅通，可以先点击它。", ORANGE
+                if self.capture_endless_save(): self.save_progress()
         elif action == "auto_solve" and self.scene == "playing":
             if self.auto_solve_queue is not None:
                 # Let the arrow already in flight finish, but do not schedule
@@ -916,6 +1047,7 @@ class Game:
                         self.endless_clears += 1
                         self.endless_total_clears += 1
                         self.endless_round_cleared = True
+                        self.endless_save = None
                         self.save_progress()
                     self.result_stars, self.result_record = 0, None
                     self.victory_started = time.monotonic()
@@ -939,6 +1071,9 @@ class Game:
             else:
                 self.feedback = "自动求解中……" if self.auto_solve_queue is not None else "很好，继续观察下一支畅通的箭头。"
                 self.advance_auto_solve()
+                if self.mode == "endless":
+                    self.capture_endless_save()
+                    self.save_progress()
         elif self.mistakes <= 0:
             self.auto_solve_queue = None
             self.scene = "fail_intro" if self.fail_overlay is not None else "fail"
@@ -981,7 +1116,9 @@ class Game:
                     self.hover = self.board_cell(self.pointer) if self.scene == "playing" and self.animation is None else None
                 elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1: self.click(self.logical_point(event.pos))
             self.update(); frame = self.render(); sw, sh = self.screen.get_size(); scale = min(sw / SIZE[0], sh / SIZE[1]); fitted = (round(SIZE[0]*scale), round(SIZE[1]*scale)); offset=((sw-fitted[0])//2,(sh-fitted[1])//2); self.screen.fill(BG); self.screen.blit(pygame.transform.smoothscale(frame, fitted), offset); pygame.display.flip(); clock.tick(FPS)
-        self.save_progress(); pygame.quit()
+        self.capture_endless_save()
+        self.save_progress()
+        pygame.quit()
 
 
 def main():
